@@ -51,14 +51,14 @@ Copies of this document may be made for your own use and for distribution to oth
 
 ## 5. Spring Boot 特性
 
-Need more details about Spring Boot’s core features? The following content is for you:
+需要更多关于 Spring Boot 核心功能的细节？ 为你准备了以下内容:
 
-* Core Features: SpringApplication | External Configuration | Profiles | Logging
-* Web Applications: MVC | Embedded Containers
-* Working with data: SQL | NO-SQL
-* Messaging: Overview | JMS
-* Testing: Overview | Boot Applications | Utils
-* Extending: Auto-configuration | @Conditions
+* 核心特性: SpringApplication | External Configuration | Profiles | Logging
+* Web 应用: MVC | Embedded Containers
+* 使用数据库: SQL | NO-SQL
+* 消息: Overview | JMS
+* 测试: Overview | Boot Applications | Utils
+* 扩展: Auto-configuration | @Conditions
 
 ## 6. 生产使用
 
