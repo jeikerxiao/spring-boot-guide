@@ -126,7 +126,24 @@ Spring Boot可以轻松创建可独立运行的、生产级的基于Spring的应
 
 ## 9. 系统要求
 
+Spring Boot 2.0.0.RELEASE 需要：
+
+1. Java 8 or Java 9
+2. Spring Framework 5.0.4.RELEASE 或更高. 
+3. Maven 3.2+ 和 Gradle 4.
+
 ### 9.1. Servlet 容器
+
+Spring Boot 支持以下嵌入式 servlet 容器:
+
+|名称	|Servlet 版本
+|---|---
+|Tomcat 8.5 |3.1
+|Jetty 9.4 |3.1
+|Undertow 1.4 |3.1
+
+你也可以将 Spring Boot 应用部署到任何兼容 Servlet 3.0+ 的容器中。
+
 ## 10. Spring Boot 安装
 ### 10.1. Java 环境安装说明
 #### 10.1.1. Maven 安装
