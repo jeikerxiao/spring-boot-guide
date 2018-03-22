@@ -947,13 +947,64 @@ Spring Boot production starters
 
 ## 14. 组织你的代码
 
+Spring Boot不需要任何特定的代码布局来工作。但是，有一些最佳实践可以提供帮助。
+
 
 
 ### 14.1. 使用“默认”包
 
+当一个类不包含包声明时，它被认为是在“默认包”中。通常不鼓励使用“默认包”，应该避免使用。对于使用`@ComponentScan`，`@EntityScan`或`@SpringBootApplication`批注的Spring Boot应用程序，它可能会导致特定问题，因为每个jar的每个类都被读取。
 
+> 我们建议您遵循Java推荐的软件包命名约定并使用反向域名（例如，com.example.project）。
 
 ### 14.2. 查找主要应用程序类
+
+我们通常建议您将主应用程序类定位在其他类上方的根包中。 `@EnableAutoConfiguration` 注释通常放在您的主类上，它隐式地为特定项目定义了一个基本“搜索包”。例如，如果您正在编写JPA应用程序，则使用`@EnableAutoConfiguration`注释类的包来搜索`@Entity`项目。
+
+使用根包也可以使用`@ComponentScan`注释而无需指定`basePackage`属性。如果您的主类位于根包中，您还可以使用`@SpringBootApplication`注释。
+
+下面的清单显示了一个典型的布局：
+
+```
+com
+ +- example
+     +- myapplication
+         +- Application.java
+         |
+         +- customer
+         |   +- Customer.java
+         |   +- CustomerController.java
+         |   +- CustomerService.java
+         |   +- CustomerRepository.java
+         |
+         +- order
+             +- Order.java
+             +- OrderController.java
+             +- OrderService.java
+             +- OrderRepository.java
+```
+
+Application.java文件将声明主要方法以及基本的@Configuration，如下所示：
+
+```java
+package com.example.myapplication;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+@EnableAutoConfiguration
+@ComponentScan
+public class Application {
+
+	public static void main(String[] args) {
+		SpringApplication.run(Application.class, args);
+	}
+
+}
+```
 
 ## 15. 配置类
 
