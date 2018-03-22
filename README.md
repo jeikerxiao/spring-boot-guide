@@ -1024,13 +1024,114 @@ Spring Boot 支持基于Java的配置。虽然可以将`SpringApplication`与XML
 
 ## 16. Auto-configuration
 
+Spring Boot自动配置会尝试根据您添加的jar依赖关系自动配置您的Spring应用程序。例如，如果HSQLDB在您的类路径中，并且您尚未手动配置任何数据库连接Bean，则Spring Boot会自动配置内存数据库。
+
+您需要选择加入自动配置，方法是将`@EnableAutoConfiguration`或`@SpringBootApplication`注释添加到其中一个`@Configuration`类中。
+
+> 您应该只添加一个`@EnableAutoConfiguration`注释。我们通常建议您将它添加到您的主要`@Configuration`类中。
+
+
 ### 16.1. 逐渐替换 Auto-configuration
+
+自动配置是非侵入式的。在任何时候，您都可以开始定义自己的配置以替换自动配置的特定部分。例如，如果您添加自己的DataSource Bean，则默认的嵌入式数据库支持会被取消。 
+
+如果您需要了解当前正在应用的自动配置以及为什么使用--debug开关启动应用程序。这样做可以为选定的核心记录器启用调试日志，并将条件报告记录到控制台。
 
 ### 16.2. 禁用特定的 Auto-configuration 类
 
+如果您发现不需要的特定自动配置类正在应用，则可以使用@EnableAutoConfiguration的exclude属性来禁用它们，如以下示例所示：
+
+```java
+import org.springframework.boot.autoconfigure.*;
+import org.springframework.boot.autoconfigure.jdbc.*;
+import org.springframework.context.annotation.*;
+
+@Configuration
+@EnableAutoConfiguration(exclude={DataSourceAutoConfiguration.class})
+public class MyConfiguration {
+
+}
+```
+
+如果该类不在类路径中，则可以使用注释的`excludeName`属性并改为指定完全限定名称。最后，您还可以通过使用`spring.autoconfigure.exclude`属性来控制要排除的自动配置类的列表。
+
+>您可以通过注释级别和使用属性来定义排除。
+
 ## 17. Spring Beans 和依赖注入
 
+您可以自由使用任何标准的Spring框架技术来定义您的bean及其注入的依赖关系。为了简单起见，我们经常发现使用`@ComponentScan`（查找bean）和使用`@Autowired`（执行构造函数注入）效果很好。
+
+如果按照上面的建议构建代码（将您的应用程序类定位到根包中），则可以添加`@ComponentScan`而不带任何参数。所有的应用程序组件（`@Component`，`@Service`，`@Repository`，`@Controller`等）都会自动注册为Spring Bean。
+
+以下示例显示了一个`@Service` Bean，它使用构造函数注入来获取必需的RiskAssessor bean：
+
+```java
+
+package com.example.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class DatabaseAccountService implements AccountService {
+
+	private final RiskAssessor riskAssessor;
+
+	@Autowired
+	public DatabaseAccountService(RiskAssessor riskAssessor) {
+		this.riskAssessor = riskAssessor;
+	}
+
+	// ...
+
+}
+```
+
+如果一个bean有一个构造函数，那么可以省略@Autowired，如下例所示：
+
+```
+@Service
+public class DatabaseAccountService implements AccountService {
+
+	private final RiskAssessor riskAssessor;
+
+	public DatabaseAccountService(RiskAssessor riskAssessor) {
+		this.riskAssessor = riskAssessor;
+	}
+
+	// ...
+
+}
+```
+
+> 注意如何使用构造函数注入让riskAssessor字段被标记为final，表明它不能被随后改变。
+
 ## 18. 使用 @SpringBootApplication 注解
+
+许多Spring Boot开发人员总是使用`@Configuration`，`@EnableAutoConfiguration`和`@ComponentScan`注解其主类。由于这些注释经常一起使用（特别是如果您遵循上述最佳实践），Spring Boot提供了一种方便的`@SpringBootApplication`替代方法。
+
+`@SpringBootApplication`注释等价于使用`@Configuration`，`@EnableAutoConfiguration`和`@ComponentScan`及其默认属性，如以下示例所示：
+
+
+```java
+
+package com.example.myapplication;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication // same as @Configuration @EnableAutoConfiguration @ComponentScan
+public class Application {
+
+	public static void main(String[] args) {
+		SpringApplication.run(Application.class, args);
+	}
+
+}
+```
+
+> `@SpringBootApplication`还提供别名来自定义`@EnableAutoConfiguration`和`@ComponentScan`的属性。
+
 
 ## 19. 运行你的应用
 
