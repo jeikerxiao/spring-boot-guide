@@ -804,15 +804,154 @@ Spring Boot 包含一个Maven插件，可以将项目打包为可执行的jar。
 
 ### 13.4. Ant
 
+可以使用Apache Ant + Ivy构建Spring Boot项目。 `spring-boot-antlib` “AntLib”模块也可以帮助Ant创建可执行的jar文件。 为了声明依赖关系，典型的`ivy.xml`文件看起来像下面的例子：
 
+```xml
+<ivy-module version="2.0">
+	<info organisation="org.springframework.boot" module="spring-boot-sample-ant" />
+	<configurations>
+		<conf name="compile" description="everything needed to compile this module" />
+		<conf name="runtime" extends="compile" description="everything needed to run this module" />
+	</configurations>
+	<dependencies>
+		<dependency org="org.springframework.boot" name="spring-boot-starter"
+			rev="${spring-boot.version}" conf="compile" />
+	</dependencies>
+</ivy-module>
+```
+
+典型的build.xml如下例所示：
+
+```xml
+<project
+	xmlns:ivy="antlib:org.apache.ivy.ant"
+	xmlns:spring-boot="antlib:org.springframework.boot.ant"
+	name="myapp" default="build">
+
+	<property name="spring-boot.version" value="2.0.0.RELEASE" />
+
+	<target name="resolve" description="--> retrieve dependencies with ivy">
+		<ivy:retrieve pattern="lib/[conf]/[artifact]-[type]-[revision].[ext]" />
+	</target>
+
+	<target name="classpaths" depends="resolve">
+		<path id="compile.classpath">
+			<fileset dir="lib/compile" includes="*.jar" />
+		</path>
+	</target>
+
+	<target name="init" depends="classpaths">
+		<mkdir dir="build/classes" />
+	</target>
+
+	<target name="compile" depends="init" description="compile">
+		<javac srcdir="src/main/java" destdir="build/classes" classpathref="compile.classpath" />
+	</target>
+
+	<target name="build" depends="compile">
+		<spring-boot:exejar destfile="build/myapp.jar" classes="build/classes">
+			<spring-boot:lib>
+				<fileset dir="lib/runtime" />
+			</spring-boot:lib>
+		</spring-boot:exejar>
+	</target>
+</project>
+
+```
+
+> 如果您不想使用 `spring-boot-antlib`模块，请参见第86.9节 “在不使用`spring-boot-antlib`的情况下从Ant生成可执行文件”“操作方法”
 
 ### 13.5. Starters
 
+启动器是一套方便的依赖描述符，可以包含在应用程序中。您可以获得所需的所有Spring及相关技术的一站式商店，而无需查看示例代码并复制粘贴依赖描述符。例如，如果您想开始使用Spring和JPA进行数据库访问，请在项目中包含 `spring-boot-starter-data-jpa` 依赖项。
+
+starters 包含很多依赖项，您需要快速启动并快速运行项目，并且需要一组支持的可传递依赖关系。
+
+> 怎么命名？
+> 
+> 所有官方首发者都遵循类似的命名模式; `spring-boot-starter-*`，其中`*`是特定类型的应用程序。这种命名结构旨在帮助您在需要查找启动器时。许多IDE中的Maven集成允许您按名称搜索依赖项。例如，通过安装适当的Eclipse或STS插件，您可以在POM编辑器中按`ctrl-space`并键入`spring-boot-starter`获取完整列表。
+> 
+> 正如“创建自己的启动器”部分所述，第三方启动器不应该从启动引导开始，因为它是为官方Spring Boot工件保留的。相反，第三方初学者通常以项目名称开头。例如，名为thirdpartyproject的第三方启动器项目通常会被命名为thirdpartyproject-spring-boot-starter。
+
+以下应用程序 starters 由 Spring Boot 在`org.springframework.boot`组下提供：
+
+Spring Boot application starters
+
+|名字|描述|Pom
+|---|---|---
+|spring-boot-starter|核心启动，包含自动配置支持，logging and YAML|Pom
+|spring-boot-starter-activemq|以JMS方式使用 Apache ActiveMQ|Pom
+|spring-boot-starter-amqp|使用 Spring AMQP and Rabbit MQ|Pom
+|spring-boot-starter-aop|使用Spring AOP and AspectJ 面向切面编程|Pom
+|spring-boot-starter-artemis|以JMS方式使用 Apache Artemis|Pom
+|spring-boot-starter-batch|使用 Spring Batch|Pom
+|spring-boot-starter-cache|使用 Spring Framework’s caching|Pom
+|spring-boot-starter-cloud-connectors|使用 Spring Cloud Connectors|Pom
+|spring-boot-starter-data-cassandra|使用 Spring Data Cassandra|Pom
+|spring-boot-starter-data-cassandra-reactive|使用响应式 Spring Data Cassandra|Pom
+|spring-boot-starter-data-couchbase|使用 Spring Data Couchbase |Pom
+|spring-boot-starter-data-couchbase-reactive|使用响应式 Spring Data Couchbase |Pom
+|spring-boot-starter-data-elasticsearch|使用 Spring Data Elasticsearch|Pom
+|spring-boot-starter-data-jpa|使用 Spring Data JPA with Hibernate|Pom
+|spring-boot-starter-data-ldap|使用 Spring Data LDAP|Pom
+|spring-boot-starter-data-mongodb|使用 Spring Data MongoDB |Pom
+|spring-boot-starter-data-mongodb-reactive|使用响应式 Spring Data MongoDB |Pom
+|spring-boot-starter-data-neo4j|使用 Spring Data Neo4j|Pom
+|spring-boot-starter-data-redis|使用 Spring Data Redis|Pom
+|spring-boot-starter-data-redis-reactive|使用响应式 Spring Data Redis|Pom
+|spring-boot-starter-data-rest|使用 Spring Data REST|Pom
+|spring-boot-starter-data-solr|使用 Apache Solr 搜索|Pom
+|spring-boot-starter-freemarker|使用 FreeMarker 模板做视图层|Pom
+|spring-boot-starter-groovy-templates|使用 Groovy 模板做视图层|Pom
+|spring-boot-starter-hateoas|使用 Spring MVC 和 Spring HATEOAS|Pom
+|spring-boot-starter-integration |使用 Spring Integration|Pom
+|spring-boot-starter-jdbc |使用 Tomcat JDBC 连接池|Pom
+|spring-boot-starter-jersey |使用 JAX-RS 和 Jersey|Pom
+|spring-boot-starter-jooq |使用 jOOQ 访问 SQL 数据库|Pom
+|spring-boot-starter-json |读写json|Pom
+|spring-boot-starter-jta-atomikos |使用 Atomikos 做 JTA|Pom
+|spring-boot-starter-jta-bitronix |使用 Bitronix 做 JTA|Pom
+|spring-boot-starter-jta-narayana |使用 Spring Boot Narayana JTA|Pom
+|spring-boot-starter-mail |使用 Java Mail 和 Spring Framework’s email|Pom
+|spring-boot-starter-mustache |使用 Mustache 做视图层|Pom
+|spring-boot-starter-quartz |使用 Spring Boot Quartz|Pom
+|spring-boot-starter-security |使用 Spring Security|Pom
+|spring-boot-starter-test |使用 JUnit, Hamcrest and Mockito 做测试|Pom
+|spring-boot-starter-thymeleaf |使用 Thymeleaf 做视图层|Pom
+|spring-boot-starter-validation |使用 Java Bean Validation with Hibernate Validator|Pom
+|spring-boot-starter-web |使用 Spring MVC|Pom
+|spring-boot-starter-web-services |使用 Spring Web Services|Pom
+|spring-boot-starter-webflux |构建 WebFlux 应用|Pom
+|spring-boot-starter-websocket |构建 WebSocket 应用|Pom
+
+除应用程序启动器外，还可以使用以下启动器来添加生产准备功能：
+
+Spring Boot production starters
+
+|名字|描述|Pom
+|---|---|---
+|spring-boot-starter-actuator|帮助监控生产服务器的健康状况|Pom
+
+
+最后，Spring Boot还包含以下启动器，如果您想要排除或交换特定技术方面，可以使用以下启动器：
+
+|名字|描述|Pom
+|---|---|---
+|spring-boot-starter-jetty|Jetty容器|Pom
+|spring-boot-starter-log4j2|log4j2日志系统|Pom
+|spring-boot-starter-logging|logging日志系统|Pom
+|spring-boot-starter-reactor-netty|响应式netty容器|Pom
+|spring-boot-starter-tomcat|Tomcat容器|Pom
+|spring-boot-starter-undertow|Undertow容器|Pom
 
 
 ## 14. 组织你的代码
 
+
+
 ### 14.1. 使用“默认”包
+
+
 
 ### 14.2. 查找主要应用程序类
 
