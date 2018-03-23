@@ -1135,17 +1135,70 @@ public class Application {
 
 ## 19. 运行你的应用
 
+将应用程序打包为jar并使用嵌入式HTTP服务器的最大优点之一是，您可以像运行其他应用程序一样运行应用程序。调试Spring Boot应用程序也很容易。您不需要任何特殊的IDE插件或扩展。
+
+> 本节仅涵盖基于jar的包装。如果您选择将应用程序打包为war文件，则应参考您的服务器和IDE文档。
+
+
 ### 19.1. 使用 IDE 运行
+
+您可以从IDE运行Spring Boot应用程序作为简单的Java应用程序。但是，您首先需要导入您的项目。导入步骤取决于您的IDE和构建系统。大多数IDE可以直接导入Maven项目。例如，Eclipse用户可以从 File 菜单中选择 `Import ...→Existing Maven Projects`。
+
+如果您无法直接将您的项目导入IDE，则可以使用构建插件生成IDE元数据。 Maven包含Eclipse和IDEA的插件。 Gradle为各种IDE提供插件。
+
+> 如果您意外运行了两次Web应用程序，则会看到“端口已被使用”错误。 STS用户可以使用`Relaunch`按钮而不是运行按钮来确保关闭任何现有的实例。
+
 
 ### 19.2. 运行打包应用
 
+如果使用Spring Boot Maven或Gradle插件创建可执行jar，则可以使用`java -jar`运行应用程序，如以下示例所示：
+
+```
+$ java -jar target/myapplication-0.0.1-SNAPSHOT.jar
+```
+
+也可以在启用远程调试支持的情况下运行打包的应用程序。这样做可以让您将调试器附加到打包的应用程序，如以下示例所示：
+
+```
+$ java -Xdebug -Xrunjdwp:server=y,transport=dt_socket,address=8000,suspend=n \
+       -jar target/myapplication-0.0.1-SNAPSHOT.jar
+```
+
 ### 19.3. 使用 Maven 插件
+
+Spring Boot Maven插件包含一个可用于快速编译和运行应用程序的运行目标。应用程序以分解形式运行，就像它们在IDE中一样。以下示例显示了运行Spring Boot应用程序的典型Maven命令：
+
+```
+$ mvn spring-boot:run
+```
+您可能还想使用`MAVEN_OPTS`操作系统环境变量，如下例所示：
+
+```
+$ export MAVEN_OPTS=-Xmx1024m
+```
 
 ### 19.4. 使用 Gradle 插件
 
+Spring Boot Gradle插件还包含一个bootRun任务，可用于以分解形式运行您的应用程序。每当您应用org.springframework.boot和java插件并在以下示例中显示时，都会添加bootRun任务：
+
+```
+$ gradle bootRun
+```
+
+您可能还想使用`JAVA_OPTS`操作系统环境变量，如以下示例所示：
+
+```
+$ export MAVEN_OPTS=-Xmx1024m
+
+```
+
 ### 19.5. 热交换
 
+由于Spring Boot应用程序只是普通的Java应用程序，所以JVM热插拔应该可以开箱即用。 JVM热插拔在可以替换的字节码方面有所限制。对于更完整的解决方案，可以使用JRebel。
 
+`spring-boot-devtools`模块还包含对快速重新启动应用程序的支持。
+
+有关详细信息，请参阅本章后面的第20章开发人员工具部分以及热插拔“操作方法”。
 
 ## 20. 开发工具
 
