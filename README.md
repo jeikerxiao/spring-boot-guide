@@ -292,6 +292,48 @@ Spring Boot Reference Guide for 2.0.0.RELEASE
 ### 37.5. 混合XA和非XA JMS连接 
 ### 37.6. 支持替代嵌入式事务管理器
 
+
+## 38. Hazelcast
+## 39. Quartz Scheduler
+## 40. Spring Integration
+## 41. Spring Session
+## 42. 监控和管理 JMX
+
+
+## 43.测试 
+### 43.1. 测试范围依赖关系 
+### 43.2. 测试Spring应用程序 
+### 43.3. 测试Spring Boot应用程序 
+#### 43.3.1. 检测Web应用程序类型 
+#### 43.3.2. 检测测试配置 
+#### 43.3.3. 排除测试配置 
+#### 43.3.4. 使用运行的服务器进行测试 
+#### 43.3.5. Mocking 和 Spying Beans
+#### 43.3.6. 自动配置的测试 
+#### 43.3.7. 自动配置的JSON测试 
+#### 43.3.8. 自动配置的Spring MVC测试 
+#### 43.3.9. 自动配置的Spring WebFlux测试 
+#### 43.3.10. 自动配置的数据JPA测试 
+#### 43.3.11. 自动配置的JDBC测试 
+#### 43.3.12. 自动配置的jOOQ测试 
+#### 43.3.13. 自动配置的数据MongoDB测试 
+#### 43.3.14. 自动配置的数据Neo4j测试 
+#### 43.3.15. 自动配置的数据Redis测试 
+#### 43.3.16. 自动配置的数据LDAP测试 
+#### 43.3.17. 自动配置的REST客户端 
+#### 43.3.18. 自动配置的Spring REST Docs测试 自动配置的Spring REST Docs使用Mock MVC进行测试 自动配置的Spring REST Docs使用REST Assured进行测试 
+#### 43.3.19. 用户配置和切片 
+#### 43.3.20. 使用Spock测试Spring Boot应用程序 
+
+### 43.4. 测试工具 
+#### 43.4.1. ConfigFileApplicationContextInitializer 
+#### 43.4.2. EnvironmentTestUtils 
+#### 43.4.3. OutputCapture 
+#### 43.4.4. TestRestTemplate
+
+## 44. Web Sockets
+## 45. Web Services
+
 # I. Spring Boot 文档
 
 本节主要是简要介绍Spring Boot参考文档。它作为文档其余部分的指引。
@@ -1630,3 +1672,488 @@ spring.devtools.remote.secret=mysecret
 ## 22. 接下来要阅读的内容
 
 您现在应该了解如何使用Spring Boot以及您应遵循的一些最佳实践。您现在可以继续深入了解特定的Spring Boot功能，或者可以跳过并阅读Spring Boot的“生产准备”部分。
+
+
+# IV. Spring Boot功能 
+
+本节将介绍Spring Boot的细节。在这里，您可以了解您可能想要使用和定制的关键功能。如果您还没有这样做，您可能需要阅读“第II部分”，入门指南“”和“第III部分”，使用Spring Boot“”部分，以便您具备良好的基础知识。
+
+## 23. SpringApplication 
+
+SpringApplication类提供了一种方便的方法来引导从 main() 方法启动的Spring应用程序。在许多情况下，您可以委派到静态 `SpringApplication.run` 方法，如以下示例所示：
+
+```java
+public static void main(String[] args) {
+	SpringApplication.run(MySpringConfiguration.class, args);
+}
+```
+
+当你的应用启动时，你将看到以下输出：
+
+```
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::   v2.0.0.RELEASE
+
+2013-07-31 00:08:16.117  INFO 56603 --- [           main] o.s.b.s.app.SampleApplication            : Starting SampleApplication v0.1.0 on mycomputer with PID 56603 (/apps/myapp.jar started by pwebb)
+2013-07-31 00:08:16.166  INFO 56603 --- [           main] ationConfigServletWebServerApplicationContext : Refreshing org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext@6e5a8246: startup date [Wed Jul 31 00:08:16 PDT 2013]; root of context hierarchy
+2014-03-04 13:09:54.912  INFO 41370 --- [           main] .t.TomcatServletWebServerFactory : Server initialized with port: 8080
+2014-03-04 13:09:56.501  INFO 41370 --- [           main] o.s.b.s.app.SampleApplication 
+```
+
+默认情况下，会显示`INFO`日志消息，其中包括一些相关的启动详细信息，例如启动应用程序的用户。如果您需要`INFO`以外的日志级别，则可以按照第26.4节“日志级别”中所述对其进行设置，
+
+### 23.1. 启动失败 
+
+如果您的应用程序无法启动，注册的`FailureAnalyzers`将有机会提供专门的错误消息和具体操作来解决问题。例如，如果您在端口`8080`上启动Web应用程序，并且该端口已在使用中，则应该看到与以下消息类似的内容：
+
+```
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Embedded servlet container failed to start. Port 8080 was already in use.
+
+Action:
+
+Identify and stop the process that's listening on port 8080 or configure this application to listen on another port.
+```
+> Spring Boot提供了许多FailureAnalyzer实现，您可以添加自己的。
+
+如果没有故障分析仪能够处理异常情况，您仍然可以显示完整的问题报告,以更好地了解问题所在。为此，您需要启用debug属性或为`org.springframework.boot.autoconfigure.logging.ConditionEvaluationReportLoggingListener`启用DEBUG日志记录。
+
+例如，如果您使用`java -jar`运行应用程序，则可以按如下所示启用调试属性：
+
+```
+$ java -jar myproject-0.0.1-SNAPSHOT.jar --debug
+```
+
+### 23.2. 自定义Banner图
+
+启动时打印的横幅可以通过将banner.txt文件添加到类路径中或通过将`spring.banner.location`属性设置为此类文件的位置来更改。如果文件的编码不是UTF-8，则可以设置`spring.banner.charset`。除了文本文件之外，还可以将`banner.gif`，`banner.jpg`或`banner.png`图像文件添加到类路径或设置`spring.banner.image.location`属性。图像被转换成ASCII艺术表现形式并打印在任何文字横幅上方。
+
+在banner.txt文件中，您可以使用以下任何占位符：
+
+Banner 变量
+|变量|描述
+|---|---
+|${application.version}|在MANIFEST.MF中声明的应用程序的版本号。例如，Implementation-Version：1.0打印为1.0。
+|${application.formatted-version}|应用程序的版本号，如MANIFEST.MF中所声明的并且格式化以显示（用括号括起来并以v作为前缀）。例如（v1.0）。
+|${spring-boot.version}| Spring Boot 版本
+|${spring-boot.formatted-version}| 您正在使用的Spring Boot版本，已格式化显示（用括号括起并以v作为前缀）。例如（v2.0.0.RELEASE）。
+|${Ansi.NAME} (or ${AnsiColor.NAME}, ${AnsiBackground.NAME}, ${AnsiStyle.NAME})|其中NAME是ANSI转义代码的名称。有关详细信息，请参阅AnsiPropertySource。
+|${application.title}|在MANIFEST.MF中声明的应用程序的标题。例如Implementation-Title：MyApp被打印为MyApp。
+
+> 如果要以编程方式生成横幅，则可以使用`SpringApplication.setBanner（...）`方法。使用`org.springframework.boot.Banner`接口并实现您自己的`printBanner()`方法。
+
+您还可以使用`spring.main.banner-mode`属性来确定横幅是否必须在System.out（控制台）上打印，发送到配置的记录器（日志），还是根本不生成（关闭）。
+
+打印的横幅在以下名称下注册为singleton bean：s​​pringBootBanner。
+
+YAML映射为false，因此如果要在应用程序中禁用横幅，请务必添加引号，如以下示例所示：
+
+```
+spring:
+	main:
+		banner-mode: "off"
+```
+
+
+
+### 23.3. 自定义SpringApplication 
+
+如果`SpringApplication`的默认设置不符合您的喜好，您可以创建一个本地实例并对其进行自定义。例如，要关闭横幅，你可以写：
+
+```java
+public static void main(String[] args) {
+	SpringApplication app = new SpringApplication(MySpringConfiguration.class);
+	app.setBannerMode(Banner.Mode.OFF);
+	app.run(args);
+}
+```
+
+> 传递给SpringApplication的构造函数参数是Spring bean的配置源。在大多数情况下，这些都是对@Configuration类的引用，但它们也可能是对XML配置或应扫描的包的引用。
+
+也可以通过使用`application.properties`文件来配置`SpringApplication`。有关详细信息，请参阅第24章，外部化配置。
+
+有关配置选项的完整列表，请参阅 SpringApplication Javadoc。
+
+
+### 23.4. Fluent Builder API 
+
+如果您需要构建`ApplicationContext`层次结构（具有父/子关系的多个上下文），或者如果您更愿意使用“流利”构建器API，则可以使用`SpringApplicationBuilder`。
+
+通过`SpringApplicationBuilder`，您可以将多个方法调用链接在一起，并包含可以创建层次结构的父方法和子方法，如以下示例所示：
+
+```java
+new SpringApplicationBuilder()
+		.sources(Parent.class)
+		.child(Application.class)
+		.bannerMode(Banner.Mode.OFF)
+		.run(args);
+	
+```
+
+> 创建ApplicationContext层次结构时有一些限制。例如，Web组件必须包含在子上下文中，并且父环境和子环境都使用相同的环境。有关完整的细节，请参阅SpringApplicationBuilder Javadoc。
+
+### 23.5. 应用程序事件和监听器 
+
+除了通常的Spring框架事件（如ContextRefreshedEvent）之外，SpringApplication还会发送一些其他应用程序事件。
+
+随着您的应用程序运行，应用程序事件按以下顺序发送：
+
+1. ApplicationStartingEvent在运行开始时但在任何处理之前发送，除了注册侦听器和初始化器之外。 
+2. 当在上下文中使用的环境是已知的但在创建上下文之前发送ApplicationEnvironmentPreparedEvent。 
+3. ApplicationPreparedEvent在刷新开始之前但在bean定义加载之后发送。 
+4. 在刷新上下文之后但在调用任何应用程序和命令行参赛者之前发送ApplicationStartedEvent。 
+5. ApplicationReadyEvent在任何应用程序和命令行参数被调用后发送。它表示应用程序已准备好为请求提供服务。 
+6. 如果启动时出现异常，则发送ApplicationFailedEvent。
+
+> 您通常不需要使用应用程序事件，但可以方便地知道它们存在。在内部，Spring Boot使用事件来处理各种任务。
+
+应用程序事件通过使用Spring Framework的事件发布机制发送。该机制的一部分确保发布给子上下文中侦听器的事件也发布给任何祖先上下文中的侦听器。因此，如果您的应用程序使用SpringApplication实例的层次结构，则侦听器可能会收到同一类型应用程序事件的多个实例。
+
+为了让你的监听器区分上下文事件和后代上下文事件，它应该请求它的应用上下文被注入，然后比较注入的上下文和事件的上下文。上下文可以通过实现`ApplicationContextAware`注入，或者如果侦听器是bean，则可以通过使用`@Autowired`注入。
+
+
+### 23.6. Web环境
+
+`SpringApplication`试图代表您创建正确类型的`ApplicationContext`。默认情况下，使用`AnnotationConfigApplicationContext`或`AnnotationConfigServletWebServerApplicationContext`，具体取决于您是否在开发Web应用程序。
+
+用于确定“网络环境”的算法相当简单（它基于几个类的存在）。如果你需要重写默认值，你可以使用`setWebEnvironment(boolean webEnvironment)`。
+
+也可以通过调用`setApplicationContextClass(...) `来完全控制`ApplicationContext`类型。
+
+在JUnit测试中使用`SpringApplication`时，通常需要调用`setWebEnvironment(false)`。
+
+### 23.7. 访问应用程序参数 
+
+如果您需要访问传递给SpringApplication.run（...）的应用程序参数，则可以注入一个org.springframework.boot.ApplicationArguments bean。 ApplicationArguments接口提供对原始String []参数以及分析的选项和非选项参数的访问，如以下示例中所示：
+
+```java
+import org.springframework.boot.*
+import org.springframework.beans.factory.annotation.*
+import org.springframework.stereotype.*
+
+@Component
+public class MyBean {
+
+	@Autowired
+	public MyBean(ApplicationArguments args) {
+		boolean debug = args.containsOption("debug");
+		List<String> files = args.getNonOptionArgs();
+		// if run with "--debug logfile.txt" debug=true, files=["logfile.txt"]
+	}
+}
+```
+
+> Spring Boot还向Spring环境注册了一个`CommandLinePropertySource`。这使您可以通过使用`@Value`注释来注入单个应用程序参数。
+
+### 23.8. 使用ApplicationRunner或CommandLineRunner 
+
+如果你需要在SpringApplication启动后运行一些特定的代码，你可以实现`ApplicationRunner`或者`CommandLineRunner`接口。两个接口都以相同的方式工作，并提供一个单独的运行方法，这个方法在`SpringApplication.run(...)`完成之前被调用。
+
+CommandLineRunner接口作为一个简单的字符串数组提供对应用程序参数的访问，而ApplicationRunner使用前面讨论的ApplicationArguments接口。以下示例显示带有run方法的CommandLineRunner：
+
+```java
+import org.springframework.boot.*
+import org.springframework.stereotype.*
+
+@Component
+public class MyBean implements CommandLineRunner {
+
+	public void run(String... args) {
+		// Do something...
+	}
+}
+```
+
+如果定义了几个必须以特定顺序调用的`CommandLineRunner`或`ApplicationRunner bean`，则可以另外实现`org.springframework.core.Ordered`接口或使用`org.springframework.core.annotation.Order`注释。
+
+### 23.9. 申请退出 
+
+每个`SpringApplication`都向JVM注册一个关闭钩子，以确保`ApplicationContext`在退出时正常关闭。可以使用所有标准的Spring生命周期回调（如DisposableBean接口或@PreDestroy注释）。
+
+另外，如果在调用 `SpringApplication.exit()` 时希望返回特定的退出代码，那么bean可以实现`org.springframework.boot.ExitCodeGenerator`接口。然后可以将此退出代码传递给`System.exit()` 以将其作为状态代码返回，如以下示例中所示：
+
+```java
+@SpringBootApplication
+public class ExitCodeApplication {
+
+	@Bean
+	public ExitCodeGenerator exitCodeGenerator() {
+		return () -> 42;
+	}
+
+	public static void main(String[] args) {
+		System.exit(SpringApplication
+				.exit(SpringApplication.run(ExitCodeApplication.class, args)));
+	}
+
+}
+```
+另外，`ExitCodeGenerator`接口可能由例外实现。遇到这样的异常时，Spring Boot将返回由实现的`getExitCode()` 方法提供的退出代码。
+
+### 23.10. 管理功能
+
+通过指定`spring.application.admin.enabled`属性，可以为应用程序启用与管理相关的功能。这暴露了平台`MBeanServer`上的`SpringApplicationAdminMXBean`。您可以使用此功能远程管理您的`Spring Boot`应用程序。此功能对于任何服务包装器实现也可能有用。
+
+> 如果您想知道应用程序在哪个HTTP端口上运行，请使用`local.server.port`的密钥获取该属性。
+
+> 启用此功能时要小心，因为MBean公开了关闭应用程序的方法。
+
+
+
+## 24. 外部化配置
+
+### 24.1. 配置随机值
+
+### 24.2. 访问命令行属性
+
+### 24.3. 应用程序属性文件
+
+### 24.4. 配置文件特定的属性
+
+### 24.5. 属性中的占位符
+
+### 24.6. 使用 YAML 文件代替 Properties 文件
+
+#### 24.6.1. 加载 YAML
+
+#### 24.6.2. 在Spring环境中展示YAML文件
+
+#### 24.6.3. 多环境 YAML 文件
+
+#### 24.6.4. YAML 缺点
+
+#### 24.6.5. 合并 YAML 列表
+
+### 24.7. 类型安全的配置属性
+
+#### 24.7.1. 第三方配置
+
+#### 24.7.2. 轻松的绑定
+
+#### 24.7.3. 属性转换和转换时间 
+
+#### 24.7.4. @ConfigurationProperties Validation
+
+#### 24.7.5. @ConfigurationProperties vs. @Value
+
+## 25. Profiles 
+### 25.1. 添加活动配置文件 
+### 25.2. 编程设置配置文件 
+### 25.3. 配置文件特定的配置文件 
+
+## 26.日志 
+### 26.1. 日志格式 
+### 26.2. 控制台输出 
+#### 26.2.1. 彩色编码输出 
+### 26.3. 文件输出 
+### 26.4. 日志级别 
+### 26.5. 自定义日志配置 
+### 26.6. Logback扩展 
+#### 26.6.1. 配置文件特定的配置 
+#### 26.6.2. 环境属性
+
+
+## 27.开发Web应用程序 
+### 27.1. Spring Web MVC框架
+#### 27.1.1. Spring MVC自动配置 
+#### 27.1.2. HttpMessageConverters 
+#### 27.1.3. 自定义JSON序列化器和反序列化器 
+#### 27.1.4. MessageCodesResolver
+#### 27.1.5. 静态内容 
+#### 27.1.6. 欢迎页面 
+#### 27.1.7. 自定义Favicon 
+#### 27.1.8. 路径匹配和内容协商 
+#### 27.1.9. ConfigurableWebBindingInitializer 
+#### 27.1.10. 模板引擎 
+#### 27.1.11. 错误处理 自定义错误页面 在Spring MVC之外映射错误页面 
+#### 27.1.12. Spring HATEOAS 
+#### 27.1.13. CORS支持 
+
+### 27.2. Spring WebFlux框架
+#### 27.2.1. Spring WebFlux自动配置 
+#### 27.2.2. 使用HttpMessageReaders和HttpMessageWriters的HTTP编解码器 
+#### 27.2.3. 静态内容 
+#### 27.2.4. 模板引擎 
+#### 27.2.5. 错误处理 自定义错误页面 
+#### 27.2.6. 网页过滤器 
+
+### 27.3. JAX-RS 和 Jersey
+### 27.4. 嵌入式Servlet容器支持 
+#### 27.4.1. Servlet，过滤器和监听器 将Spring Servlet，过滤器和监听器注册为Spring Bean 
+#### 27.4.2. Servlet上下文初始化 扫描Servlet，筛选器和侦听器 
+#### 27.4.3. ServletWebServerApplicationContext 
+#### 27.4.4. 定制嵌入式Servlet容器 程序化定制 直接自定义ConfigurableServletWebServerFactory 
+#### 27.4.5. JSP限制
+
+# 28. 安全 
+## 28.1. MVC安全 
+## 28.2. WebFlux安全 
+## 28.3. OAuth2 
+### 28.3.1. 客户端 
+## 28.4. Actuator 安全 
+### 28.4.1. 跨站请求伪造保护
+
+## 29.使用SQL数据库 
+### 29.1. 配置一个数据源 
+#### 29.1.1. 嵌入数据库支持 
+#### 29.1.2. 连接到生产数据库 
+#### 29.1.3. 连接到JNDI数据源 
+### 29.2. 使用JdbcTemplate 
+### 29.3. JPA和“Spring Data” 
+#### 29.3.1. 实体类 
+#### 29.3.2. Spring Data JPA存储库 
+#### 29.3.3. 创建和删除JPA数据库 
+#### 29.3.4. 在View中打开EntityManager 
+### 29.4. 使用H2的Web控制台 
+#### 29.4.1. 更改H2 Console的路径 
+### 29.5. 使用jOOQ 
+#### 29.5.1. 代码生成 
+#### 29.5.2. 使用DSLContext 
+#### 29.5.3. jOOQ SQL方言 
+#### 29.5.4. 定制jOOQ
+
+## 30.使用 NoSQL 技术 
+
+### 30.1. Redis 
+#### 30.1.1. 连接到Redis 
+
+### 30.2. MongoDB 
+#### 30.2.1. 连接到MongoDB数据库 
+#### 30.2.2. MongoTemplate 
+#### 30.2.3. Spring Data MongoDB存储库 
+#### 30.2.4. 嵌入式Mongo 
+
+### 30.3. Neo4j 
+#### 30.3.1. 连接到Neo4j数据库 
+#### 30.3.2. 使用嵌入式模式 
+#### 30.3.3. Neo4jSession 
+#### 30.3.4. Spring Data Neo4j存储库 
+#### 30.3.5. 存储库示例 
+
+### 30.4. GemFire
+ 
+### 30.5. Solr 
+#### 30.5.1. 连接到Solr 
+#### 30.5.2. Spring Data Solr存储库 
+
+### 30.6. Elasticsearch 
+#### 30.6.1. 使用Jest连接到Elasticsearch 
+#### 30.6.2. 通过使用Spring Data 连接到Elasticsearch 
+#### 30.6.3. Spring Data Elasticsearch存储库 
+
+### 30.7. Cassandra
+#### 30.7.1. 连接到Cassandra 
+#### 30.7.2. Spring Data Cassandra存储库 
+
+### 30.8. Couchbase 
+#### 30.8.1. 连接到Couchbase 
+#### 30.8.2. Spring Data Couchbase存储库 
+
+### 30.9. LDAP 
+#### 30.9.1. 连接到LDAP服务器 
+#### 30.9.2. Spring数据LDAP存储库 
+#### 30.9.3. 嵌入式内存LDAP服务器 
+
+### 30.10. InfluxDB 
+#### 30.10.1. 连接到InfluxDB
+
+## 31.缓存 
+### 31.1. 支持的缓存提供程序 
+#### 31.1.1. 通用 
+#### 31.1.2. JCache（JSR-107） 
+#### 31.1.3. EhCache 2.x 
+#### 31.1.4. Hazelcast 
+#### 31.1.5. Infinispan
+#### 31.1.6. Couchbase 
+#### 31.1.7. Redis
+#### 31.1.8. Caffeine
+#### 31.1.9. Simple 
+#### 31.1.10. None
+
+## 32.信息 
+### 32.1. JMS 
+#### 32.1.1. ActiveMQ支持 
+#### 32.1.2. Artemis支持 
+#### 32.1.3. 使用JNDI ConnectionFactory 
+#### 32.1.4. 发送消息 
+#### 32.1.5. 接收消息 
+
+### 32.2. AMQP 
+#### 32.2.1. RabbitMQ支持 
+#### 32.2.2. 发送消息 
+#### 32.2.3. 接收消息 
+
+### 32.3. Apache Kafka 
+#### 32.3.1. 发送消息 
+#### 32.3.2. 接收消息 
+#### 32.3.3. 额外的 Kafka 属性
+
+## 33.用RestTemplate调用REST服务 
+### 33.1. RestTemplate自定义 
+
+## 34.使用WebClient调用REST服务 
+### 34.1. WebClient自定义 
+
+## 35.验证 
+
+## 36.发送电子邮件 
+
+## 37.与JTA的分布式事务 
+### 37.1. 使用Atomikos事务管理器 
+### 37.2. 使用Bitronix事务管理器 
+### 37.3. 使用Narayana事务管理器 
+### 37.4. 使用Java EE托管事务管理器 
+### 37.5. 混合XA和非XA JMS连接 
+### 37.6. 支持替代嵌入式事务管理器
+
+
+## 38. Hazelcast
+## 39. Quartz Scheduler
+## 40. Spring Integration
+## 41. Spring Session
+## 42. 监控和管理 JMX
+
+
+## 43.测试 
+### 43.1. 测试范围依赖关系 
+### 43.2. 测试Spring应用程序 
+### 43.3. 测试Spring Boot应用程序 
+#### 43.3.1. 检测Web应用程序类型 
+#### 43.3.2. 检测测试配置 
+#### 43.3.3. 排除测试配置 
+#### 43.3.4. 使用运行的服务器进行测试 
+#### 43.3.5. Mocking 和 Spying Beans
+#### 43.3.6. 自动配置的测试 
+#### 43.3.7. 自动配置的JSON测试 
+#### 43.3.8. 自动配置的Spring MVC测试 
+#### 43.3.9. 自动配置的Spring WebFlux测试 
+#### 43.3.10. 自动配置的数据JPA测试 
+#### 43.3.11. 自动配置的JDBC测试 
+#### 43.3.12. 自动配置的jOOQ测试 
+#### 43.3.13. 自动配置的数据MongoDB测试 
+#### 43.3.14. 自动配置的数据Neo4j测试 
+#### 43.3.15. 自动配置的数据Redis测试 
+#### 43.3.16. 自动配置的数据LDAP测试 
+#### 43.3.17. 自动配置的REST客户端 
+#### 43.3.18. 自动配置的Spring REST Docs测试 自动配置的Spring REST Docs使用Mock MVC进行测试 自动配置的Spring REST Docs使用REST Assured进行测试 
+#### 43.3.19. 用户配置和切片 
+#### 43.3.20. 使用Spock测试Spring Boot应用程序 
+
+### 43.4. 测试工具 
+#### 43.4.1. ConfigFileApplicationContextInitializer 
+#### 43.4.2. EnvironmentTestUtils 
+#### 43.4.3. OutputCapture 
+#### 43.4.4. TestRestTemplate
+
+## 44. Web Sockets
+## 45. Web Services
