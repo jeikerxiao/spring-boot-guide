@@ -90,6 +90,207 @@ Spring Boot Reference Guide for 2.0.0.RELEASE
 ## 21. 为生产环境打包应用
 ## 22. 接下来要阅读的内容
 
+# IV. Spring Boot功能 
+## 23. SpringApplication 
+### 23.1. 启动失败 
+### 23.2. 自定义Banner 
+### 23.3. 自定义SpringApplication 
+### 23.4. Fluent Builder API 
+### 23.5. 应用程序事件和监听器 
+### 23.6. Web环境
+### 23.7. 访问应用程序参数 
+### 23.8. 使用ApplicationRunner或CommandLineRunner 
+### 23.9. 申请退出 
+### 23.10. 管理功能
+
+## 24. 外部化配置
+### 24.1. 配置随机值
+### 24.2. 访问命令行属性
+### 24.3. 应用程序属性文件
+### 24.4. 配置文件特定的属性
+### 24.5. 属性中的占位符
+### 24.6. 使用 YAML 文件代替 Properties 文件
+#### 24.6.1. 加载 YAML
+#### 24.6.2. 在Spring环境中展示YAML文件
+#### 24.6.3. 多环境 YAML 文件
+#### 24.6.4. YAML 缺点
+#### 24.6.5. 合并 YAML 列表
+### 24.7. 类型安全的配置属性
+#### 24.7.1. 第三方配置
+#### 24.7.2. 轻松的绑定
+#### 24.7.3. 属性转换和转换时间 
+#### 24.7.4. @ConfigurationProperties Validation
+#### 24.7.5. @ConfigurationProperties vs. @Value
+
+## 25. Profiles 
+### 25.1. 添加活动配置文件 
+### 25.2. 编程设置配置文件 
+### 25.3. 配置文件特定的配置文件 
+
+## 26.日志 
+### 26.1. 日志格式 
+### 26.2. 控制台输出 
+#### 26.2.1. 彩色编码输出 
+### 26.3. 文件输出 
+### 26.4. 日志级别 
+### 26.5. 自定义日志配置 
+### 26.6. Logback扩展 
+#### 26.6.1. 配置文件特定的配置 
+#### 26.6.2. 环境属性
+
+
+## 27.开发Web应用程序 
+### 27.1. Spring Web MVC框架
+#### 27.1.1. Spring MVC自动配置 
+#### 27.1.2. HttpMessageConverters 
+#### 27.1.3. 自定义JSON序列化器和反序列化器 
+#### 27.1.4. MessageCodesResolver
+#### 27.1.5. 静态内容 
+#### 27.1.6. 欢迎页面 
+#### 27.1.7. 自定义Favicon 
+#### 27.1.8. 路径匹配和内容协商 
+#### 27.1.9. ConfigurableWebBindingInitializer 
+#### 27.1.10. 模板引擎 
+#### 27.1.11. 错误处理 自定义错误页面 在Spring MVC之外映射错误页面 
+#### 27.1.12. Spring HATEOAS 
+#### 27.1.13. CORS支持 
+
+### 27.2. Spring WebFlux框架
+#### 27.2.1. Spring WebFlux自动配置 
+#### 27.2.2. 使用HttpMessageReaders和HttpMessageWriters的HTTP编解码器 
+#### 27.2.3. 静态内容 
+#### 27.2.4. 模板引擎 
+#### 27.2.5. 错误处理 自定义错误页面 
+#### 27.2.6. 网页过滤器 
+
+### 27.3. JAX-RS 和 Jersey
+### 27.4. 嵌入式Servlet容器支持 
+#### 27.4.1. Servlet，过滤器和监听器 将Spring Servlet，过滤器和监听器注册为Spring Bean 
+#### 27.4.2. Servlet上下文初始化 扫描Servlet，筛选器和侦听器 
+#### 27.4.3. ServletWebServerApplicationContext 
+#### 27.4.4. 定制嵌入式Servlet容器 程序化定制 直接自定义ConfigurableServletWebServerFactory 
+#### 27.4.5. JSP限制
+
+# 28. 安全 
+## 28.1. MVC安全 
+## 28.2. WebFlux安全 
+## 28.3. OAuth2 
+### 28.3.1. 客户端 
+## 28.4. Actuator 安全 
+### 28.4.1. 跨站请求伪造保护
+
+## 29.使用SQL数据库 
+### 29.1. 配置一个数据源 
+#### 29.1.1. 嵌入数据库支持 
+#### 29.1.2. 连接到生产数据库 
+#### 29.1.3. 连接到JNDI数据源 
+### 29.2. 使用JdbcTemplate 
+### 29.3. JPA和“Spring Data” 
+#### 29.3.1. 实体类 
+#### 29.3.2. Spring Data JPA存储库 
+#### 29.3.3. 创建和删除JPA数据库 
+#### 29.3.4. 在View中打开EntityManager 
+### 29.4. 使用H2的Web控制台 
+#### 29.4.1. 更改H2 Console的路径 
+### 29.5. 使用jOOQ 
+#### 29.5.1. 代码生成 
+#### 29.5.2. 使用DSLContext 
+#### 29.5.3. jOOQ SQL方言 
+#### 29.5.4. 定制jOOQ
+
+## 30.使用 NoSQL 技术 
+
+### 30.1. Redis 
+#### 30.1.1. 连接到Redis 
+
+### 30.2. MongoDB 
+#### 30.2.1. 连接到MongoDB数据库 
+#### 30.2.2. MongoTemplate 
+#### 30.2.3. Spring Data MongoDB存储库 
+#### 30.2.4. 嵌入式Mongo 
+
+### 30.3. Neo4j 
+#### 30.3.1. 连接到Neo4j数据库 
+#### 30.3.2. 使用嵌入式模式 
+#### 30.3.3. Neo4jSession 
+#### 30.3.4. Spring Data Neo4j存储库 
+#### 30.3.5. 存储库示例 
+
+### 30.4. GemFire
+ 
+### 30.5. Solr 
+#### 30.5.1. 连接到Solr 
+#### 30.5.2. Spring Data Solr存储库 
+
+### 30.6. Elasticsearch 
+#### 30.6.1. 使用Jest连接到Elasticsearch 
+#### 30.6.2. 通过使用Spring Data 连接到Elasticsearch 
+#### 30.6.3. Spring Data Elasticsearch存储库 
+
+### 30.7. Cassandra
+#### 30.7.1. 连接到Cassandra 
+#### 30.7.2. Spring Data Cassandra存储库 
+
+### 30.8. Couchbase 
+#### 30.8.1. 连接到Couchbase 
+#### 30.8.2. Spring Data Couchbase存储库 
+
+### 30.9. LDAP 
+#### 30.9.1. 连接到LDAP服务器 
+#### 30.9.2. Spring数据LDAP存储库 
+#### 30.9.3. 嵌入式内存LDAP服务器 
+
+### 30.10. InfluxDB 
+#### 30.10.1. 连接到InfluxDB
+
+## 31.缓存 
+### 31.1. 支持的缓存提供程序 
+#### 31.1.1. 通用 
+#### 31.1.2. JCache（JSR-107） 
+#### 31.1.3. EhCache 2.x 
+#### 31.1.4. Hazelcast 
+#### 31.1.5. Infinispan
+#### 31.1.6. Couchbase 
+#### 31.1.7. Redis
+#### 31.1.8. Caffeine
+#### 31.1.9. Simple 
+#### 31.1.10. None
+
+## 32.信息 
+### 32.1. JMS 
+#### 32.1.1. ActiveMQ支持 
+#### 32.1.2. Artemis支持 
+#### 32.1.3. 使用JNDI ConnectionFactory 
+#### 32.1.4. 发送消息 
+#### 32.1.5. 接收消息 
+
+### 32.2. AMQP 
+#### 32.2.1. RabbitMQ支持 
+#### 32.2.2. 发送消息 
+#### 32.2.3. 接收消息 
+
+### 32.3. Apache Kafka 
+#### 32.3.1. 发送消息 
+#### 32.3.2. 接收消息 
+#### 32.3.3. 额外的 Kafka 属性
+
+## 33.用RestTemplate调用REST服务 
+### 33.1. RestTemplate自定义 
+
+## 34.使用WebClient调用REST服务 
+### 34.1. WebClient自定义 
+
+## 35.验证 
+
+## 36.发送电子邮件 
+
+## 37.与JTA的分布式事务 
+### 37.1. 使用Atomikos事务管理器 
+### 37.2. 使用Bitronix事务管理器 
+### 37.3. 使用Narayana事务管理器 
+### 37.4. 使用Java EE托管事务管理器 
+### 37.5. 混合XA和非XA JMS连接 
+### 37.6. 支持替代嵌入式事务管理器
 
 # I. Spring Boot 文档
 
