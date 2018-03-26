@@ -3555,19 +3555,150 @@ public ConfigurableServletWebServerFactory webServerFactory() {
 * 创建自定义error.jsp页面不会覆盖错误处理的默认视图。应该使用自定义错误页面。
 
 
-# 28. 安全 
+## 28. 安全 
 
-## 28.1. MVC安全 
+如果Spring Security位于类路径中，那么默认情况下，Web应用程序是安全的。 Spring Boot依靠Spring Security的内容协商策略来确定是使用httpBasic还是formLogin。要向Web应用程序添加方法级别的安全性，还可以添加`@EnableGlobalMethodSecurity`和所需的设置。更多信息可以在Spring Security参考指南中找到。
 
-## 28.2. WebFlux安全 
+默认的`AuthenticationManager`有一个用户。用户名是用户，密码是随机的，并在应用程序启动时以INFO级别打印，如下例所示：
 
-## 28.3. OAuth2 
+```
+Using generated security password: 78fa095d-3f4c-48b1-ad50-e24c31d5cf35
+```
 
-### 28.3.1. 客户端 
+如果您对日志记录配置进行了微调，请确保将`org.springframework.boot.autoconfigure.security`类别设置为记录INFO级别的消息。否则，默认密码不会被打印。
 
-## 28.4. Actuator 安全 
+您可以通过提供一个spring.security.user.name和spring.security.user.password来更改用户名和密码。 
 
-### 28.4.1. 跨站请求伪造保护
+您在Web应用程序中默认获得的基本功能是：
+
+* UserDetailsS​​ervice（或WebFlux应用程序中的ReactiveUserDetailsS​​ervice）具有内存存储的Bean和具有生成密码的单个用户（请参阅SecurityProperties.User以获取用户的属性）。
+* 基于表单的登录或HTTP基本安全性（取决于内容类型）用于整个应用程序（包括执行机构在类路径上时的执行机构端点）。 
+* 用于发布身份验证事件的`DefaultAuthenticationEventPublisher`。 
+
+您可以通过为其添加一个bean来提供不同的`AuthenticationEventPublisher`。
+
+
+### 28.1. MVC安全 
+
+默认安全配置在`SecurityAutoConfiguration`和从那里导入的类中实现（`SpringBootWebSecurityConfiguration`用于Web安全性，`AuthenticationManagerConfiguration`用于认证配置，这在非Web应用程序中也是相关的）。
+
+要完全关闭默认Web应用程序安全配置，您可以添加WebSecurityConfigurerAdapter类型的bean（这样做不会禁用认证管理器配置或Actuator的安全性）。 要关闭身份验证管理器配置，您可以添加一个UserDetailsS​​ervice，AuthenticationProvider或`AuthenticationManager`类型的bean。 Spring Boot示例中有几个安全的应用程序让您开始使用常见用例。 
+
+通过添加自定义`WebSecurityConfigurerAdapter`可以覆盖访问规则。 Spring Boot提供了可用于覆盖执行器端点和静态资源的访问规则的便捷方法。 `EndpointRequest`可用于创建基于`management.endpoints.web.base-path`属性的`RequestMatcher`。 PathRequest可用于为常用位置中的资源创建`RequestMatcher`。
+
+
+### 28.2. WebFlux安全 
+
+与Spring MVC应用程序类似，您可以通过添加`spring-boot-starter-security`依赖关系来保护WebFlux应用程序。默认安全配置在`ReactiveSecurityAutoConfiguration`和从那里导入的类中实现（`WebFluxSecurityConfiguration`用于Web安全性，`ReactiveAuthenticationManagerConfiguration`用于认证配置，这在非Web应用程序中也是相关的）。要完全关闭默认Web应用程序安全配置，您可以添加`WebFilterChainProxy`类型的Bean（这样做不会禁用身份验证管理器配置或执行器的安全性）。 
+
+要关闭身份验证管理器配置，您可以添加`ReactiveUserDetailsS​​ervice`或`ReactiveAuthenticationManager`类型的bean。 
+
+访问规则可以通过添加一个自定义的`SecurityWebFilterChain`进行配置。 Spring Boot提供了可用于覆盖执行器端点和静态资源的访问规则的便捷方法。 `EndpointRequest`可用于创建基于management.endpoints.web.base-path属性的ServerWebExchangeMatcher。 
+
+`PathRequest`可用于为常用位置的资源创建`ServerWebExchangeMatcher`。 
+
+例如，您可以通过添加如下内容来自定义您的安全配置：
+
+```java
+@Bean
+public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+	http
+		.authorizeExchange()
+			.matchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
+			.pathMatchers("/foo", "/bar")
+				.authenticated().and()
+			.formLogin();
+	return http.build();
+}
+
+```
+
+### 28.3. OAuth2 
+
+OAuth2是Spring支持的广泛使用的授权框架。
+
+#### 28.3.1. 客户端 
+
+如果您的类路径中包含`spring-security-oauth2-client`，则可以利用一些自动配置来轻松设置OAuth2客户端。此配置使用`OAuth2ClientProperties`下的属性。 
+
+您可以在`spring.security.oauth2.client`前缀下注册多个OAuth2客户端和提供者，如以下示例所示：
+
+```
+spring.security.oauth2.client.registration.my-client-1.client-id=abcd
+spring.security.oauth2.client.registration.my-client-1.client-secret=password
+spring.security.oauth2.client.registration.my-client-1.client-name=Client for user scope
+spring.security.oauth2.client.registration.my-client-1.provider=my-oauth-provider
+spring.security.oauth2.client.registration.my-client-1.scope=user
+spring.security.oauth2.client.registration.my-client-1.redirect-uri-template=http://my-redirect-uri.com
+spring.security.oauth2.client.registration.my-client-1.client-authentication-method=basic
+spring.security.oauth2.client.registration.my-client-1.authorization-grant-type=authorization_code
+
+spring.security.oauth2.client.registration.my-client-2.client-id=abcd
+spring.security.oauth2.client.registration.my-client-2.client-secret=password
+spring.security.oauth2.client.registration.my-client-2.client-name=Client for email scope
+spring.security.oauth2.client.registration.my-client-2.provider=my-oauth-provider
+spring.security.oauth2.client.registration.my-client-2.scope=email
+spring.security.oauth2.client.registration.my-client-2.redirect-uri-template=http://my-redirect-uri.com
+spring.security.oauth2.client.registration.my-client-2.client-authentication-method=basic
+spring.security.oauth2.client.registration.my-client-2.authorization-grant-type=authorization_code
+
+spring.security.oauth2.client.provider.my-oauth-provider.authorization-uri=http://my-auth-server/oauth/authorize
+spring.security.oauth2.client.provider.my-oauth-provider.token-uri=http://my-auth-server/oauth/token
+spring.security.oauth2.client.provider.my-oauth-provider.user-info-uri=http://my-auth-server/userinfo
+spring.security.oauth2.client.provider.my-oauth-provider.jwk-set-uri=http://my-auth-server/token_keys
+spring.security.oauth2.client.provider.my-oauth-provider.user-name-attribute=name
+```
+
+默认情况下，Spring Security的`OAuth2LoginAuthenticationFilter`只处理匹配`/login/oauth2/code/*` 的URL。如果您想自定义redirect-uri-template以使用不同的模式，则需要提供配置以处理该自定义模式。例如，您可以添加您自己的`WebSecurityConfigurerAdapter`，类似于以下内容：
+
+```
+public class OAuth2LoginSecurityConfig extends WebSecurityConfigurerAdapter {
+
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+		http
+			.authorizeRequests()
+				.anyRequest().authenticated()
+				.and()
+			.oauth2Login()
+				.redirectionEndpoint()
+					.baseUri("/custom-callback");
+	}
+}
+```
+对于常见的OAuth2和OpenID提供商，包括Google，Github，Facebook和Okta，我们提供一组提供商默认设置（分别为google，github，facebook和okta）。
+
+如果您不需要自定义这些提供程序，则可以将提供程序属性设置为您需要推断默认值的那个。另外，如果您的客户端的ID与默认支持的提供者相匹配，那么Spring Boot也会推断这一点。
+
+换句话说，以下示例中的两种配置使用Google提供程序：
+
+```
+spring.security.oauth2.client.registration.my-client.client-id=abcd
+spring.security.oauth2.client.registration.my-client.client-secret=password
+spring.security.oauth2.client.registration.my-client.provider=google
+
+spring.security.oauth2.client.registration.google.client-id=abcd
+spring.security.oauth2.client.registration.google.client-secret=password
+```
+
+### 28.4. Actuator 安全 
+
+出于安全考虑，除 `/health` 和 `/info` 之外的所有执行器默认都是禁用的。 `management.endpoints.web.exposure.include`属性可用于启用执行器。 
+
+如果Spring Security位于类路径中，并且没有其他`WebSecurityConfigurerAdapter`存在，则执行器通过Spring Boot auto-config进行保护。如果您定义了自定义的WebSecurityConfigurerAdapter，则Spring Boot auto-config将退出，您将完全控制执行器访问规则。
+
+在设置management.endpoints.web.exposure.include之前，请确保暴露的执行器不包含敏感信息和/或通过将其放置在防火墙或Spring Security之类的安全设备之后进行安全保护。
+
+
+
+#### 28.4.1. 跨站请求伪造保护
+
+
+由于Spring Boot依赖于Spring Security的默认设置，默认情况下，CSRF保护功能处于打开状态。这意味着执行器端点需要一个POST（关闭和记录器端点），当使用默认安全配置时，PUT或DELETE将得到一个403禁止的错误。
+
+> 我们建议只有在创建非浏览器客户端使用的服务时才能完全禁用CSRF保护。
+
+有关CSRF保护的更多信息，请参见“Spring Security参考指南”。
 
 ## 29.使用SQL数据库 
 
@@ -3604,6 +3735,9 @@ public ConfigurableServletWebServerFactory webServerFactory() {
 #### 29.5.3. jOOQ SQL方言 
 
 #### 29.5.4. 定制jOOQ
+
+
+
 
 ## 30.使用 NoSQL 技术 
 
