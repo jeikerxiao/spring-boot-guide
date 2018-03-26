@@ -3355,25 +3355,205 @@ public class CustomErrorWebExceptionHandler extends AbstractErrorWebExceptionHan
 }
 ```
 
-要获得更完整的图片，您还可以直接继承`DefaultErrorWebExceptionHandler`并覆盖特定的方法。
+要获得更完整的描述，您还可以直接继承`DefaultErrorWebExceptionHandler`并覆盖特定的方法。
 
+#### 自定义错误界面
+
+如果要为给定状态代码显示自定义HTML错误页面，则可以将文件添加到/ error文件夹。错误页面可以是静态HTML（即，添加到任何静态资源文件夹下）或使用模板构建。文件的名称应该是确切的状态码或系列掩码。
+
+例如，要将404映射到静态HTML文件，您的文件夹结构如下所示：
+
+```
+src/
+ +- main/
+     +- java/
+     |   + <source code>
+     +- resources/
+         +- public/
+             +- error/
+             |   +- 404.html
+             +- <other public assets>
+```
+
+要使用Mustache模板映射所有5xx错误，您的文件夹结构如下所示：
+
+```
+src/
+ +- main/
+     +- java/
+     |   + <source code>
+     +- resources/
+         +- templates/
+             +- error/
+             |   +- 5xx.mustache
+             +- <other templates>
+```
 
 
 #### 27.2.6. 网页过滤器 
 
+Spring WebFlux提供了一个WebFilter接口，可以实现过滤HTTP请求响应交换。应用程序上下文中找到的WebFilter bean将自动用于过滤每个交换。 
+
+如果过滤器的顺序很重要，可以实施Ordered或使用@Order进行注释。 Spring Boot自动配置可以为您配置网页过滤器。当它这样做时，将使用下表中显示的订单：
+
+|Web Filter| Order
+|---|---
+|MetricsWebFilter|Ordered.HIGHEST_PRECEDENCE + 1
+|WebFilterChainProxy (Spring Security)|-100
+|HttpTraceWebFilter|Ordered.LOWEST_PRECEDENCE - 10
+
 ### 27.3. JAX-RS 和 Jersey
+
+如果您更喜欢REST端点的JAX-RS编程模型，则可以使用其中一个可用实现，而不是Spring MVC。如果在应用程序上下文中将他们的Servlet或Filter注册为@Bean，Jersey 1.x和Apache CXF可以很好地工作。 Jersey 2.x具有一些原生Spring支持，因此我们还在Spring Boot中为它提供了自动配置支持，以及一个启动器。 
+
+要开始使用Jersey 2.x，请将spring-boot-starter-jersey作为依赖项包含在内，然后您需要一个ResourceConfig类型的@Bean，您可以在其中注册所有端点，如以下示例所示：
+
+```java
+@Component
+public class JerseyConfig extends ResourceConfig {
+
+	public JerseyConfig() {
+		register(Endpoint.class);
+	}
+
+}
+```
+
+
+Jersey’s 对扫描可执行档案的支持相当有限。例如，运行可执行的war文件时，它不能扫描WEB-INF /类中找到的包中的端点。为了避免这种限制，不应该使用包方法，并且应该使用register方法单独注册端点，如上例所示。
+
+对于更高级的自定义，您还可以注册任意数量的实现ResourceConfigCustomizer的bean。 
+
+所有注册的端点应该是带有HTTP资源注释的@Components（@GET等），如下例所示：
+
+```java
+@Component
+@Path("/hello")
+public class Endpoint {
+
+	@GET
+	public String message() {
+		return "Hello";
+	}
+
+}
+```
+
+由于`Endpoint`是Spring `@Component`，它的生命周期由Spring管理，您可以使用`@Autowired`注释来注入依赖关系并使用@Value注释来注入外部配置。默认情况下，Jersey servlet已注册并映射到`/*`。您可以通过将@ApplicationPath添加到您的ResourceConfig来更改映射。 
+
+默认情况下，Jersey被设置为一个名为`jerseyServletRegistration`的`ServletRegistrationBean`类型的@Bean中的Servlet。默认情况下，servlet是懒惰初始化的，但您可以通过设置`spring.jersey.servlet.load-on-startup`来自定义该行为。您可以通过使用相同名称创建自己的一个来禁用或覆盖该bean。您也可以通过设置`spring.jersey.type = filter`来使用过滤器来代替servlet（在这种情况下，要替换或覆盖的@Bean是jerseyFilterRegistration）。过滤器有一个@Order，你可以使用`spring.jersey.filter.order`来设置。 servlet和过滤器注册都可以通过使用`spring.jersey.init.*`指定init参数来指定属性映射。 有一个泽西岛样本，以便你可以看到如何设置。还有一个Jersey 1.x样本。请注意，在Jersey 1.x示例中，spring-boot maven插件已配置为解压缩一些Jersey Jar，以便可以通过JAX-RS实现进行扫描（因为示例要求在它的Filter中扫描它们注册）。如果您的任何JAX-RS资源打包为嵌套罐，您可能需要执行相同的操作。
 
 ### 27.4. 嵌入式Servlet容器支持 
 
-#### 27.4.1. Servlet，过滤器和监听器 将Spring Servlet，过滤器和监听器注册为Spring Bean 
+Spring Boot包含对嵌入式Tomcat，Jetty和Undertow服务器的支持。大多数开发人员使用适当的“Starter”来获取完全配置的实例。默认情况下，嵌入式服务器在端口8080上侦听HTTP请求。
+
+> 如果您选择在CentOS上使用Tomcat，请注意，默认情况下，临时目录用于存储已编译的JSP，文件上载等。当您的应用程序正在运行时，此目录可能会被`tmpwatch`删除，从而导致失败。为了避免这种行为，你可能想要定制你的tmpwatch配置，这样tomcat。*目录就不会被删除，或者配置`server.tomcat.basedir`，这样内置的Tomcat就会使用不同的位置。
+
+#### 27.4.1. Servlet，过滤器和监听器 
+
+当使用嵌入式servlet容器时，可以通过使用Spring bean或通过扫描Servlet组件来注册servlet，过滤器和Servlet规范中的所有侦听器（如HttpSessionListener）.
+
+#### 将Spring Servlet，过滤器和监听器注册为Spring Bean 
+
+任何作为Spring bean的Servlet，Filter或Servlet `*Listener`实例都将在嵌入容器中注册。如果要在配置期间从`application.properties`中引用一个值，这可能特别方便。 
+
+默认情况下，如果上下文只包含一个Servlet，它将映射到`/`。在多个servlet bean的情况下，bean名称被用作路径前缀。过滤映射到 `/*`。
+
+如果基于约定的映射不够灵活，则可以使用`ServletRegistrationBean`，`FilterRegistrationBean`和`ServletListenerRegistrationBean`类进行完全控制。
+
+Spring Boot附带了许多可以定义Filter beans的自动配置。以下是过滤器及其各自顺序的几个示例（低位值意味着更高的优先级）：
+
+|Servlet Filter| Order
+|---|---
+|OrderedCharacterEncodingFilter| Ordered.HIGHEST_PRECEDENCE
+|WebMvcMetricsFilter| Ordered.HIGHEST_PRECEDENCE + 1
+|ErrorPageFilter| Ordered.HIGHEST_PRECEDENCE + 1
+|HttpTraceFilter | Ordered.LOWEST_PRECEDENCE - 10
+
+离开Filter beans无序通常是安全的。 
+
+如果需要特定顺序，您应该避免配置一个读取`Ordered.HIGHEST_PRECEDENCE`中的请求主体的Filter，因为它可能违背应用程序的字符编码配置。如果Servlet筛选器包装请求，则应该使用小于或等于`FilterRegistrationBean.REQUEST_WRAPPER_FILTER_MAX_ORDER`的顺序进行配置。
+
 
 #### 27.4.2. Servlet上下文初始化 扫描Servlet，筛选器和侦听器 
 
+嵌入式servlet容器不直接执行Servlet 3.0+ `javax.servlet.ServletContainerInitializer`接口或Spring的`org.springframework.web.WebApplicationInitializer`接口。这是一个有意的设计决策，旨在降低设计在战争中运行的第三方库可能破坏Spring Boot应用程序的风险。 
+
+如果您需要在Spring Boot应用程序中执行servlet上下文初始化，则应该注册一个实现`org.springframework.boot.web.servlet.ServletContextInitializer`接口的bean。单个onStartup方法提供对ServletContext的访问，并且如有必要，可以很容易地用作现有`WebApplicationInitializer`的适配器。
+
+
+使用嵌入式容器时，可以使用`@ServletComponentScan`启用使用`@WebServlet`，`@WebFilter`和`@WebListener`注释的类的自动注册。
+
+> `@ServletComponentScan`在独立容器中不起作用，在该容器中使用容器的内置发现机制。
+
 #### 27.4.3. ServletWebServerApplicationContext 
 
-#### 27.4.4. 定制嵌入式Servlet容器 程序化定制 直接自定义ConfigurableServletWebServerFactory 
+
+在底层，Spring Boot为嵌入式servlet容器支持使用了不同类型的`ApplicationContext`。 `ServletWebServerApplicationContext`是一种特殊类型的`WebApplicationContext`，通过搜索单个`ServletWebServerFactory` bean来引导自身。通常会自动配置`TomcatServletWebServerFactory`，`JettyServletWebServerFactory`或`UndertowServletWebServerFactory`。 
+
+> 您通常不需要知道这些实现类。大多数应用程序都是自动配置的，并且代表您创建相应的`ApplicationContext`和`ServletWebServerFactory`。
+
+#### 27.4.4. 定制嵌入式Servlet容器 
+
+通用的servlet容器设置可以使用Spring Environment属性进行配置。通常，您可以在application.properties文件中定义属性。 
+
+通用服务器设置包括：
+
+* 网络设置：侦听传入HTTP请求的端口（server.port），绑定到server.address的接口地址等。
+* 会话设置：会话是否持久（server.servlet.session.persistence），会话超时（server.servlet.session.timeout），会话数据的位置（server.servlet.session.store-dir）和会话cookie配置（server.servlet.session.cookie.*）。
+* 错误管理：错误页面的位置（server.error.path）等。
+* SSL
+* HTTP 压缩
+
+Spring Boot尽可能地尝试暴露常见设置，但这并非总是可行。对于这些情况，专用名称空间提供了特定于服务器的定制（请参阅server.tomcat和server.undertow）。例如，可以使用嵌入式servlet容器的特定功能来配置访问日志。
+
+#### 程序化定制 
+
+如果你需要以编程方式配置你的嵌入式servlet容器，你可以注册一个实现了WebServerFactoryCustomizer接口的Spring bean。 WebServerFactoryCustomizer提供对ConfigurableServletWebServerFactory的访问，其中包含许多定制设置器方法。 Tomcat，Jetty和Undertow都有专门的变体。以下示例以编程方式显示设置端口：
+
+```java
+import org.springframework.boot.web.server.WebServerFactoryCustomizer;
+import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory;
+import org.springframework.stereotype.Component;
+
+@Component
+public class CustomizationBean implements WebServerFactoryCustomizer<ConfigurableServletWebServerFactory> {
+
+	@Override
+	public void customize(ConfigurableServletWebServerFactory server) {
+		server.setPort(9000);
+	}
+
+}
+```
+
+#### 直接自定义ConfigurableServletWebServerFactory 
+
+如果上述自定义技术太有限，则可以自己注册TomcatServletWebServerFactory，JettyServletWebServerFactory或UndertowServletWebServerFactory bean。
+
+```java
+@Bean
+public ConfigurableServletWebServerFactory webServerFactory() {
+	TomcatServletWebServerFactory factory = new TomcatServletWebServerFactory();
+	factory.setPort(9000);
+	factory.setSessionTimeout(10, TimeUnit.MINUTES);
+	factory.addErrorPages(new ErrorPage(HttpStatus.NOT_FOUND, "/notfound.html"));
+	return factory;
+}
+```
+为许多配置选项提供安装程序。如果你需要做一些更奇特的事情，还提供了一些受保护的方法“挂钩”。有关详细信息，请参阅源代码文档。
+
+
 
 #### 27.4.5. JSP限制
+
+运行使用嵌入式servlet容器的Spring Boot应用程序（并打包为可执行文件）时，JSP支持中存在一些限制。
+
+* 有了Tomcat，如果你使用war包装，它应该可以工作。也就是说，一个可执行的war工作，也可以部署到一个标准的容器（不限于，但包括Tomcat）。由于Tomcat中的硬编码文件模式，可执行jar无法使用。
+* 使用Jetty，如果您使用 war 包装，它应该可以工作。也就是说，一个可执行的 war 有效，并且也可以部署到任何标准容器。
+* Undertow不支持JSP。
+* 创建自定义error.jsp页面不会覆盖错误处理的默认视图。应该使用自定义错误页面。
+
 
 # 28. 安全 
 
