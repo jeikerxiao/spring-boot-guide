@@ -3702,41 +3702,335 @@ spring.security.oauth2.client.registration.google.client-secret=password
 
 ## 29.使用SQL数据库 
 
+Spring框架为使用SQL数据库提供了广泛的支持，使用`JdbcTemplate`进行直接JDBC访问以完成诸如Hibernate之类的“对象关系映射”技术。 Spring Data提供了额外的功能级别：直接从接口创建Repository实现，并使用约定从方法名称中生成查询。
+
 ### 29.1. 配置一个数据源 
+
+Java的`javax.sql.DataSource`接口提供了使用数据库连接的标准方法。传统上，“数据源”使用URL和一些凭据来建立数据库连接。
 
 #### 29.1.1. 嵌入数据库支持 
 
+通过使用内存中的嵌入式数据库来开发应用程序通常很方便。显然，内存数据库不提供持久存储。您需要在应用程序启动时填充数据库，并准备在应用程序结束时丢弃数据。
+
+Spring Boot可以自动配置嵌入式H2，HSQL和Derby数据库。您无需提供任何连接网址。您只需要包含对要使用的嵌入式数据库的构建依赖关系。
+
+> 如果您在测试中使用此功能，则可能会注意到无论您使用的应用程序上下文的数量如何，整个测试套件都会重复使用相同的数据库。如果要确保每个上下文都有单独的嵌入式数据库，则应将`spring.datasource.generate-unique-name`设置为true。
+
+例如，典型的POM依赖关系如下所示：
+
+```xml
+<dependency>
+	<groupId>org.springframework.boot</groupId>
+	<artifactId>spring-boot-starter-data-jpa</artifactId>
+</dependency>
+<dependency>
+	<groupId>org.hsqldb</groupId>
+	<artifactId>hsqldb</artifactId>
+	<scope>runtime</scope>
+</dependency>
+```
+
+您需要依靠spring-jdbc来为嵌入式数据库自动配置。在这个例子中，它是通过`spring-boot-starter-data-jpa`传递的。
+
+
+如果出于某种原因，您配置了嵌入式数据库的连接URL，请注意确保数据库的自动关闭已禁用。如果您使用H2，则应该使用`DB_CLOSE_ON_EXIT = FALSE`来执行此操作。如果您使用HSQLDB，则应确保不使用`shutdown = true`。禁用数据库的自动关闭功能可在数据库关闭时进行Spring Boot控制，从而确保在不再需要访问数据库时发生这种情况。
+
+
 #### 29.1.2. 连接到生产数据库 
+
+生产数据库连接也可以通过使用池化数据源来自动配置。 Spring Boot使用以下算法来选择特定的实现：
+
+1. 我们更喜欢HikariCP的性能和并发性。如果HikariCP可用，我们总是选择它。
+2. 否则，如果Tomcat池数据源可用，我们使用它。
+3. 如果HikariCP和Tomcat池数据源都不可用，并且Commons DBCP2可用，那么我们使用它。
+
+如果使用`spring-boot-starter-jdbc`或`spring-boot-starter-data-jpa`“starters”，则会自动获得对`HikariCP`的依赖关系。
+
+您可以完全绕过该算法，并通过设置spring.datasource.type属性来指定要使用的连接池。如果您在Tomcat容器中运行应用程序，这一点尤其重要，因为默认情况下会提供tomcat-jdbc。
+
+其他连接池始终可以手动配置。如果您定义了自己的DataSource bean，则不会发生自动配置。
+
+DataSource配置由`spring.datasource.*`中的外部配置属性控制。例如，您可以在`application.properties`中声明以下部分：
+
+```
+spring.datasource.url=jdbc:mysql://localhost/test
+spring.datasource.username=dbuser
+spring.datasource.password=dbpass
+spring.datasource.driver-class-name=com.mysql.jdbc.Driver
+```
+
+> 您至少应该通过设置spring.datasource.url属性来指定URL。否则，Spring Boot将尝试自动配置嵌入式数据库。
+
+> 您通常不需要指定驱动程序类名称，因为Spring Boot可以从url中为大多数数据库推断它。
+
+> 对于要创建的共享数据源，我们需要能够验证有效的驱动程序类是否可用，因此我们在做任何事之前都会检查该类。换句话说，如果您设置了`spring.datasource.driver-class-name = com.mysql.jdbc.Driver`，那么该类必须是可加载的。
+
+
+有关更多支持的选项，请参阅`DataSourceProperties`。无论实际实施情况如何，这些都是标准选项。还可以通过使用各自的前缀（`spring.datasource.hikari.*`，`spring.datasource.tomcat.*`和`spring.datasource.dbcp2.*`）来微调特定于实现的设置。请参阅您正在使用的连接池实现的文档以获取更多详细信息。
+
+例如，如果您使用Tomcat连接池，则可以自定义许多其他设置，如以下示例中所示：
+
+```
+# Number of ms to wait before throwing an exception if no connection is available.
+spring.datasource.tomcat.max-wait=10000
+
+# Maximum number of active connections that can be allocated from this pool at the same time.
+spring.datasource.tomcat.max-active=50
+
+# Validate the connection before borrowing it from the pool.
+spring.datasource.tomcat.test-on-borrow=true
+```
 
 #### 29.1.3. 连接到JNDI数据源 
 
+如果您将Spring Boot应用程序部署到应用程序服务器，则可能需要使用Application Server的内置功能来配置和管理您的DataSource，并使用JNDI访问它。 
+
+`spring.datasource.jndi-name`属性可用作`spring.datasource.url`，`spring.datasource.username`和`spring.datasource.password`属性的替代方法，以从特定的JNDI位置访问数据源。例如，`application.properties`中的以下部分显示了如何访问JBoss AS定义的数据源：
+
+```
+spring.datasource.jndi-name=java:jboss/datasources/customers
+```
+
 ### 29.2. 使用JdbcTemplate 
+
+Spring的JdbcTemplate和NamedParameterJdbcTemplate类是自动配置的，你可以@Autowire它们直接到你自己的bean中，如下例所示：
+
+```java
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Component;
+
+@Component
+public class MyBean {
+
+	private final JdbcTemplate jdbcTemplate;
+
+	@Autowired
+	public MyBean(JdbcTemplate jdbcTemplate) {
+		this.jdbcTemplate = jdbcTemplate;
+	}
+
+	// ...
+
+}
+```
+
+您可以使用`spring.jdbc.template.*`属性自定义模板的某些属性，如下例所示：
+
+```
+spring.jdbc.template.max-rows=500
+```
+
+`NamedParameterJdbcTemplate`在场景后面重用相同的`JdbcTemplate`实例。如果定义了多个`JdbcTemplate`并且不存在主要候选，则`NamedParameterJdbcTemplate`不会自动配置。
 
 ### 29.3. JPA和“Spring Data” 
 
+Java持久性API是一种标准技术，可让您将对象映射到关系数据库。 `spring-boot-starter-data-jpa` POM提供了一种快速开始的方法。它提供了以下关键依赖关系：
+
+* Hibernate：最流行的JPA实现之一。
+* Spring Data JPA：可以轻松实现基于JPA的存储库。
+* Spring ORMs：Spring框架的核心ORM支持。
+
+> 我们在这里没有涉及JPA或Spring Data的太多细节。您可以按照spring.io中的“使用JPA访问数据”指南并阅读Spring Data JPA和Hibernate参考文档。
+
+
+
 #### 29.3.1. 实体类 
+
+传统上，JPA“实体”类是在persistence.xml文件中指定的。使用Spring Boot时，此文件不是必需的，而是使用“实体扫描”。默认情况下，将搜索主配置类下面的所有包（使用`@EnableAutoConfiguration`或`@SpringBootApplication`注释的包）。 任何使用`@Entity`，`@Embeddable`或`@MappedSuperclass`注解的类都会被考虑。典型的实体类与以下示例类似：
+
+```java
+
+package com.example.myapp.domain;
+
+import java.io.Serializable;
+import javax.persistence.*;
+
+@Entity
+public class City implements Serializable {
+
+	@Id
+	@GeneratedValue
+	private Long id;
+
+	@Column(nullable = false)
+	private String name;
+
+	@Column(nullable = false)
+	private String state;
+
+	// ... additional members, often include @OneToMany mappings
+
+	protected City() {
+		// no-args constructor required by JPA spec
+		// this one is protected since it shouldn't be used directly
+	}
+
+	public City(String name, String state) {
+		this.name = name;
+		this.country = country;
+	}
+
+	public String getName() {
+		return this.name;
+	}
+
+	public String getState() {
+		return this.state;
+	}
+
+	// ... etc
+
+}
+```
+
+您可以使用`@EntityScan`批注自定义实体扫描位置。请参阅第79.4节“从Spring配置中分离@实体定义”，操作方法。
+
 
 #### 29.3.2. Spring Data JPA存储库 
 
+Spring Data JPA 存储库是您可以定义以访问数据的接口。 JPA查询是从您的方法名称自动创建的。例如，CityRepository接口可能会声明findAllByState（String state）方法来查找给定状态下的所有城市。 
+
+对于更复杂的查询，您可以使用Spring Data的注释标注您的方法。 
+
+Spring Data存储库通常从Repository或CrudRepository接口扩展而来。如果使用自动配置，则从包含主配置类（使用@EnableAutoConfiguration或@SpringBootApplication注释的那个）的包中搜索存储库。 
+
+以下示例显示了一个典型的Spring数据存储库接口定义：
+
+```java
+package com.example.myapp.domain;
+
+import org.springframework.data.domain.*;
+import org.springframework.data.repository.*;
+
+public interface CityRepository extends Repository<City, Long> {
+
+	Page<City> findAll(Pageable pageable);
+
+	City findByNameAndCountryAllIgnoringCase(String name, String country);
+
+}
+```
+
 #### 29.3.3. 创建和删除JPA数据库 
+
+默认情况下，只有在使用嵌入式数据库（H2，HSQL或Derby）时才会自动创建JPA数据库。您可以使用`spring.jpa.*`属性显式配置JPA设置。例如，要创建和删除表，可以将以下行添加到`application.properties`中：
+
+```
+spring.jpa.hibernate.ddl-auto=create-drop
+```
+
+> Hibernate自己的内部属性名称（如果你碰巧记得它更好）是hibernate.hbm2ddl.auto。您可以使用spring.jpa.properties.*（在将前缀添加到实体管理器之前将其剥离）与其他H​​ibernate原生属性一起设置它。以下一行显示了为Hibernate设置JPA属性的示例：
+
+```
+spring.jpa.properties.hibernate.globally_quoted_identifiers=true
+```
+
+上例中的行将`hibernate.globally_quoted_identifiers`属性的值传递给Hibernate实体管理器。
+
+默认情况下，DDL执行（或验证）被推迟到`ApplicationContext`已经启动。还有一个`spring.jpa.generate-ddl`标志，但是如果Hibernate自动配置处于活动状态，则不会使用它，因为ddl-auto设置更加精细。
 
 #### 29.3.4. 在View中打开EntityManager 
 
+如果您运行的是Web应用程序，则默认情况下，Spring Boot会注册`OpenEntityManagerInViewInterceptor`以应用“视图中的Open EntityManager”模式，以允许在Web视图中进行延迟加载。如果你不想要这种行为，你应该在`application.properties`中将`spring.jpa.open-in-view`设置为false。
+
 ### 29.4. 使用H2的Web控制台 
+
+H2数据库提供了一个基于浏览器的控制台，Spring Boot可以为您自动配置。满足以下条件时，控制台会自动配置：
+
+* 您正在开发一个Web应用程序。
+* `com.h2database:h2`位于类路径中。
+* 您正在使用Spring Boot的开发人员工具。
+
+> 如果您没有使用Spring Boot的开发者工具，但仍想使用H2的控制台，则可以将`spring.h2.console.enabled`属性的值配置为true。
+> 
+> H2控制台仅用于开发过程中，因此您应注意确保`spring.h2.console.enabled`在生产中未设置为true。
 
 #### 29.4.1. 更改H2 Console的路径 
 
+默认情况下，控制台在 `/h2-console`上可用。您可以使用`spring.h2.console.path`属性自定义控制台的路径。
+
 ### 29.5. 使用jOOQ 
+
+Java面向对象查询（jOOQ）是Data Geekery的一款流行产品，它可以从数据库中生成Java代码，并允许您通过其流畅的API构建类型安全的SQL查询。商业和开源版本都可以与Spring Boot一起使用。
+
 
 #### 29.5.1. 代码生成 
 
+为了使用jOOQ类型安全查询，您需要从数据库模式生成Java类。您可以按照jOOQ用户手册中的说明进行操作。如果您使用`jooq-codegen-maven`插件并且还使用了`spring-boot-starter-parent`“parent POM”，则可以安全地省略插件的`<version>`标记。您也可以使用Spring Boot定义的版本变量（如h2.version）来声明插件的数据库依赖性。以下列表显示了一个示例：
+
+```xml
+<plugin>
+	<groupId>org.jooq</groupId>
+	<artifactId>jooq-codegen-maven</artifactId>
+	<executions>
+		...
+	</executions>
+	<dependencies>
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<version>${h2.version}</version>
+		</dependency>
+	</dependencies>
+	<configuration>
+		<jdbc>
+			<driver>org.h2.Driver</driver>
+			<url>jdbc:h2:~/yourdatabase</url>
+		</jdbc>
+		<generator>
+			...
+		</generator>
+	</configuration>
+</plugin>
+```
+
 #### 29.5.2. 使用DSLContext 
+
+jOOQ提供的流畅的API是通过org.jooq.DSLContext接口启动的。 Spring Boot自动将DSLContext配置为Spring Bean并将其连接到应用程序DataSource。要使用DSLContext，可以@Autowire它，如以下示例所示：
+
+```java
+@Component
+public class JooqExample implements CommandLineRunner {
+
+	private final DSLContext create;
+
+	@Autowired
+	public JooqExample(DSLContext dslContext) {
+		this.create = dslContext;
+	}
+
+}
+```
+
+> jOOQ手册倾向于使用名为create的变量来保存DSLContext。
+
+然后，您可以使用DSLContext来构建您的查询，如以下示例所示：
+
+```java
+public List<GregorianCalendar> authorsBornAfter1980() {
+	return this.create.selectFrom(AUTHOR)
+		.where(AUTHOR.DATE_OF_BIRTH.greaterThan(new GregorianCalendar(1980, 0, 1)))
+		.fetch(AUTHOR.DATE_OF_BIRTH);
+}
+```
 
 #### 29.5.3. jOOQ SQL方言 
 
+除非已配置spring.jooq.sql-dialect属性，否则Spring Boot将确定用于数据源的SQL方言。如果Spring Boot无法检测到方言，则使用DEFAULT。
+
 #### 29.5.4. 定制jOOQ
 
+更高级的自定义可以通过定义自己的@Bean定义来实现，该定义在创建jOOQ配置时使用。您可以为以下jOOQ类型定义bean：
 
+* ConnectionProvider
+* TransactionProvider
+* RecordMapperProvider
+* RecordListenerProvider
+* ExecuteListenerProvider
+* VisitListenerProvider
+
+如果你想完全控制jOOQ配置，你也可以创建你自己的`org.jooq.Configuration` `@Bean`。
 
 
 ## 30.使用 NoSQL 技术 
