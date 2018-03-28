@@ -5154,11 +5154,106 @@ spring.kafka.producer.properties.spring.json.add.type.headers=false
 
 ## 33.用RestTemplate调用REST服务 
 
+如果您需要从应用程序调用远程REST服务，则可以使用Spring Framework的RestTemplate类。由于RestTemplate实例通常需要在使用之前进行定制，因此Spring Boot不提供任何自动配置的RestTemplate bean。但是，它会自动配置RestTemplateBuilder，可以在需要时使用RestTemplateBuilder创建RestTemplate实例。自动配置的RestTemplateBuilder确保将敏感的HttpMessageConverters应用于RestTemplate实例。
+
+以下代码显示了一个典型示例：
+
+```java
+@Service
+public class MyService {
+
+	private final RestTemplate restTemplate;
+
+	public MyBean(RestTemplateBuilder restTemplateBuilder) {
+		this.restTemplate = restTemplateBuilder.build();
+	}
+
+	public Details someRestCall(String name) {
+		return this.restTemplate.getForObject("/{name}/details", Details.class, name);
+	}
+
+}
+```
+
+> RestTemplateBuilder包含许多可用于快速配置RestTemplate的有用方法。例如，要添加BASIC认证支持，可以使用`builder.basicAuthorization("user","password").build()`。
+
+
 ### 33.1. RestTemplate自定义 
+
+`RestTemplate`自定义有三种主要方法，具体取决于您希望自定义应用的范围。 
+
+为了尽可能缩小任何自定义的范围，请注入自动配置的`RestTemplateBuilder`，然后根据需要调用其方法。每个方法调用都会返回一个新的`RestTemplateBuilder`实例，因此自定义仅影响构建器的这种使用。 
+
+要进行应用程序范围的附加定制，请使用`RestTemplateCustomizer` bean。所有这些bean都会自动注册到自动配置的`RestTemplateBuilder`中，并应用于任何使用它构建的模板。 
+
+以下示例显示了一个定制程序，该定制程序为除`192.168.0.5`之外的所有主机配置代理的使用：
+
+```java
+static class ProxyCustomizer implements RestTemplateCustomizer {
+
+	@Override
+	public void customize(RestTemplate restTemplate) {
+		HttpHost proxy = new HttpHost("proxy.example.com");
+		HttpClient httpClient = HttpClientBuilder.create()
+				.setRoutePlanner(new DefaultProxyRoutePlanner(proxy) {
+
+					@Override
+					public HttpHost determineProxy(HttpHost target,
+							HttpRequest request, HttpContext context)
+							throws HttpException {
+						if (target.getHostName().equals("192.168.0.5")) {
+							return null;
+						}
+						return super.determineProxy(target, request, context);
+					}
+
+				}).build();
+		restTemplate.setRequestFactory(
+				new HttpComponentsClientHttpRequestFactory(httpClient));
+	}
+
+}
+```
+
+最后，最极端的（也是很少使用的）选项是创建你自己的`RestTemplateBuilder` bean。这样做会关闭`RestTemplateBuilder`的自动配置，并防止使用任何`RestTemplateCustomizer` bean。
 
 ## 34.使用WebClient调用REST服务 
 
+如果你的类路径上有Spring WebFlux，你也可以选择使用WebClient来调用远程REST服务。与RestTemplate相比，此客户端具有更多的功能，并且完全被动。您可以使用构建器`WebClient.create()` 创建自己的客户端实例。请参阅WebClient上的相关部分。
+
+Spring Boot为您创建并预配置这样的构建器。例如，客户端HTTP编解码器的配置方式与服务器的相同（请参阅WebFlux HTTP编解码器自动配置）。
+
+以下代码显示了一个典型示例：
+
+```java
+@Service
+public class MyService {
+
+	private final WebClient webClient;
+
+	public MyBean(WebClient.Builder webClientBuilder) {
+		this.webClient = webClientBuilder.baseUrl("http://example.org").build();
+	}
+
+	public Mono<Details> someRestCall(String name) {
+		return this.webClient.get().url("/{name}/details", name)
+						.retrieve().bodyToMono(Details.class);
+	}
+
+}
+```
+
+
 ### 34.1. WebClient自定义 
+
+WebClient定制有三种主要方法，具体取决于您希望自定义应用的范围。 
+
+要使自定义的范围尽可能窄，请注入自动配置的`WebClient.Builder`，然后根据需要调用其方法。 `WebClient.Builder`实例是有状态的：构建器上的任何更改都反映在随后用它创建的所有客户端中。如果要使用相同的构建器创建多个客户端，还可以考虑使用`WebClient.Builder other = builder.clone()`;来克隆构建器。
+
+要为所有`WebClient.Builder`实例进行应用程序范围的附加定制，您可以声明`WebClientCustomizer` bean并在注入点本地更改`WebClient.Builder`。
+
+最后，您可以回退到原始API并使用`WebClient.create()`。在这种情况下，不应用自动配置或`WebClientCustomizer`。
+
 
 ## 35.验证 
 
