@@ -5257,54 +5257,178 @@ WebClient定制有三种主要方法，具体取决于您希望自定义应用�
 
 ## 35.验证 
 
+只要JSR-303实现（例如Hibernate验证器）位于类路径中，Bean Validation 1.1支持的方法验证功能就会自动启用。这使bean方法可以在其参数和/或返回值上使用`javax.validation`约束进行注释。具有此类带注释方法的目标类需要在类型级别使用`@Validated`注释进行注释，以便为其内联约束注释搜索其方法。
+
+例如，以下服务触发第一个参数的验证，确保它的大小在8到10之间：
+
+```java
+@Service
+@Validated
+public class MyBean {
+
+	public Archive findByCodeAndAuthor(@Size(min = 8, max = 10) String code,
+			Author author) {
+		...
+	}
+
+}
+```
+
 ## 36.发送电子邮件 
 
+Spring框架通过使用`JavaMailSender`接口为发送电子邮件提供了一个简单的抽象，Spring Boot为它提供了自动配置以及一个入门模块。
+
+如果`spring.mail.host`和相关库（由`spring-boot-starter-mail`定义）可用，则创建默认`JavaMailSender`（如果不存在）。发件人可以通过`spring.mail`命名空间中的配置项进一步自定义。有关更多详细信息，请参阅MailProperties。
+
+特别是，某些默认超时值是无限的，并且您可能想要更改该值以避免线程阻塞无响应的邮件服务器，如下例所示：
+
+```
+spring.mail.properties.mail.smtp.connectiontimeout=5000
+spring.mail.properties.mail.smtp.timeout=3000
+spring.mail.properties.mail.smtp.writetimeout=5000
+```
+
 ## 37.与JTA的分布式事务 
+
+Spring Boot通过使用`Atomikos`或`Bitronix`嵌入式事务管理器支持跨多个XA资源的分布式JTA事务。部署到合适的Java EE应用服务器时，也支持JTA事务。 
+
+当检测到JTA环境时，Spring的`JtaTransactionManager`用于管理事务。自动配置的JMS，DataSource和JPA bean已升级以支持XA事务。您可以使用标准的Spring成语，例如`@Transactional`来参与分布式事务。如果您处于JTA环境中并仍希望使用本地事务，则可以将`spring.jta.enabled`属性设置为false以禁用JTA自动配置。
+
+
 ### 37.1. 使用Atomikos事务管理器 
+
+Atomikos是一个流行的开源事务管理器，可以嵌入到Spring Boot应用程序中。您可以使用`spring-boot-starter-jta-atomikos` Starter来提取适当的Atomikos库。 Spring Boot会自动配置Atomikos并确保适当的依赖设置适用于Spring bean，以便正确启动和关闭订单。
+
+默认情况下，Atomikos事务日志被写入应用程序主目录（应用程序jar文件所在的目录）中的事务日志目录。您可以通过在`application.properties`文件中设置`spring.jta.log-dir`属性来自定义此目录的位置。以`spring.jta.atomikos.properties`开头的属性也可用于定制Atomikos `UserTransactionServiceImp`。有关完整的详细信息，请参阅`AtomikosProperties` Javadoc。
+
+> 为了确保多个事务管理器可以安全地协调相同的资源管理器，每个Atomikos实例必须配置一个唯一的ID。默认情况下，此ID是运行Atomikos的机器的IP地址。为确保生产中的唯一性，您应该为应用程序的每个实例配置不同值的`spring.jta.transaction-manager-id`属性。
+
+
+
 ### 37.2. 使用Bitronix事务管理器 
+
+Bitronix是一个流行的开源JTA事务管理器实现。您可以使用`spring-boot-starter-jta-bitronix`启动器将适当的Bitronix依赖项添加到您的项目中。与Atomikos一样，Spring Boot会自动配置Bitronix并对bean进行后处理，以确保启动和关闭顺序是正确的。
+
+默认情况下，Bitronix事务日志文件（`part1.btm`和`part2.btm`）被写入应用程序主目录中的事务日志目录。您可以通过设置`spring.jta.log-dir`属性来自定义此目录的位置。以`spring.jta.bitronix.properties`开头的属性也绑定到`bitronix.tm.Configuration` bean，允许完全自定义。有关详细信息，请参阅Bitronix文档。
+
+> 为了确保多个事务管理器可以安全地协调相同的资源管理器，每个Bitronix实例必须配置一个唯一的ID。默认情况下，此ID是运行Bitronix的计算机的IP地址。为确保生产中的唯一性，您应该为应用程序的每个实例配置不同值的`spring.jta.transaction-manager-id`属性。
+
+
 ### 37.3. 使用Narayana事务管理器 
+
+Narayana是JBoss支持的流行开源JTA事务管理器实现。您可以使用`spring-boot-starter-jta-narayana`启动器将适当的`Narayana`依赖项添加到您的项目中。与`Atomikos`和`Bitronix`一样，Spring Boot自动配置`Narayana`并对bean进行后处理，以确保启动和关闭顺序是正确的。
+
+默认情况下，`Narayana`事务日志被写入应用程序主目录（应用程序jar文件所在的目录）中的事务日志目录。您可以通过在`application.properties`文件中设置`spring.jta.log-dir`属性来自定义此目录的位置。以`spring.jta.narayana.properties`开头的属性也可用于自定义`Narayana`配置。有关完整的详细信息，请参阅`NarayanaProperties` Javadoc。
+
+> 为确保多个事务管理器可以安全地协调相同的资源管理器，必须为每个`Narayana`实例配置一个唯一的ID。默认情况下，此ID设置为`1`.为确保生产中的唯一性，您应该为应用程序的每个实例配置不同值的`spring.jta.transaction-manager-id`属性。
+
+
 ### 37.4. 使用Java EE托管事务管理器 
+
+
 ### 37.5. 混合XA和非XA JMS连接 
+
+
 ### 37.6. 支持替代嵌入式事务管理器
 
 
 ## 38. Hazelcast
+
+
 ## 39. Quartz Scheduler
+
+
 ## 40. Spring Integration
+
+
 ## 41. Spring Session
+
+
 ## 42. 监控和管理 JMX
 
 
 ## 43.测试 
+
+
 ### 43.1. 测试范围依赖关系 
+
+
 ### 43.2. 测试Spring应用程序 
+
+
 ### 43.3. 测试Spring Boot应用程序 
+
+
 #### 43.3.1. 检测Web应用程序类型 
+
+
 #### 43.3.2. 检测测试配置 
+
+
 #### 43.3.3. 排除测试配置 
+
+
 #### 43.3.4. 使用运行的服务器进行测试 
+
+
 #### 43.3.5. Mocking 和 Spying Beans
+
+
 #### 43.3.6. 自动配置的测试 
+
+
 #### 43.3.7. 自动配置的JSON测试 
+
+
 #### 43.3.8. 自动配置的Spring MVC测试 
+
+
 #### 43.3.9. 自动配置的Spring WebFlux测试 
+
+
 #### 43.3.10. 自动配置的数据JPA测试 
+
+
 #### 43.3.11. 自动配置的JDBC测试 
+
+
 #### 43.3.12. 自动配置的jOOQ测试 
+
+
 #### 43.3.13. 自动配置的数据MongoDB测试 
+
+
 #### 43.3.14. 自动配置的数据Neo4j测试 
+
+
 #### 43.3.15. 自动配置的数据Redis测试 
+
+
 #### 43.3.16. 自动配置的数据LDAP测试 
+
+
 #### 43.3.17. 自动配置的REST客户端 
+
+
 #### 43.3.18. 自动配置的Spring REST Docs测试 自动配置的Spring REST Docs使用Mock MVC进行测试 自动配置的Spring REST Docs使用REST Assured进行测试 
+
+
 #### 43.3.19. 用户配置和切片 
+
+
 #### 43.3.20. 使用Spock测试Spring Boot应用程序 
 
 ### 43.4. 测试工具 
+
 #### 43.4.1. ConfigFileApplicationContextInitializer 
+
 #### 43.4.2. EnvironmentTestUtils 
+
 #### 43.4.3. OutputCapture 
+
 #### 43.4.4. TestRestTemplate
 
+
 ## 44. Web Sockets
+
 ## 45. Web Services
